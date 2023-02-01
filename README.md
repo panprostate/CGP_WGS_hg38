@@ -1,4 +1,4 @@
-CgpWGS_hg88
+CgpWGS_hg38
 ===========
 
 *Under Construction*
