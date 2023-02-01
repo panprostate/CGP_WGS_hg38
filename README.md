@@ -6,6 +6,7 @@ CgpWGS_hg88
 Scripts and documentaion for mapping and variant calling using hg38.
 
 | File/ Directory | Description |
+| --- | --- |
 | [docs/mapping.md](docs/mapping.md) | Intructions for mapping to hg38 using Docker/Singularity (docktore-cgpmap) |
 | [docs/sanger_pipeline.md](docs/sanger_pipeline.md) | Intructions for running the Sanger Pipeline using Docker/Singularity (dockstore-cgpwgs) |
 | [/misc/bpipe_workflows](/misc/bpipe_workflows) | 'bpipe' workflows used in Sanger to run the Sanger Pipeline |
