@@ -1,6 +1,6 @@
 # Analysis
 
-At the Sanger Institute, WGS analayis is peformed by running containerised tools as singularity images. The order and flow of input/output s orchestrated by 'bpipe' - a perl based pipeline manager.
+At the Sanger Institute, WGS analysis is performed by running containerised tools as singularity images. The order and flow of input/output s orchestrated by 'bpipe' - a perl based pipeline manager.
 
 The containerised tools are available to be downloaded individually as singularity or docker images.
 
@@ -11,7 +11,7 @@ The containerised tools are available to be downloaded individually as singulari
 | [cgpcavemanwrapper](https://quay.io/repository/wtsicgp/cgpcavemanwrapper) | caveman.pl |
 | [cgppindel](https://quay.io/repository/wtsicgp/cgppindel) | pindel.pl |
 
-However, all of the tools are contained together in a single container '[dockstore-cgpwgs](https://github.com/cancerit/dockstore-cgpwgs)'. All of the tools can be run at once on a tumor normal pair using this image. This is controlled by the script [analysisWGS.sh]('https://github.com/cancerit/dockstore-cgpwgs/blob/develop/scripts/analysisWGS.sh') (which is called using the entrypoint 'ds-cgpwgs.pl').
+However, all of the tools are contained together in a single container '[dockstore-cgpwgs](https://github.com/cancerit/dockstore-cgpwgs)'. All of the tools can be run at once on a tumor normal pair using this image. This is controlled by the script [analysisWGS.sh]('https://github.com/cancerit/dockstore-cgpwgs/blob/develop/scripts/analysisWGS.sh') (which is called using the entry point 'ds-cgpwgs.pl').
 
 ## Reference data
 

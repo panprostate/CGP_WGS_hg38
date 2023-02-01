@@ -1,6 +1,6 @@
 # Mapping
 
-[dockstore-cgpmap](https://github.com/cancerit/dockstore-cgpmap) is a containerised tool written by the Sanger institute to peform mapping with bwamem or bwamem2 and post mapping alignment using bwakit.
+[dockstore-cgpmap](https://github.com/cancerit/dockstore-cgpmap) is a containerised tool written by the Sanger institute to perform mapping with bwamem or bwamem2 and post mapping alignment using bwakit.
 
 ## Running with helper script (Docker or Singularity)
 
@@ -12,7 +12,7 @@ bash cgpmap_helper.sh [BAM_FILE] [HOW] [BWAMEM]
 
 | Argument      | Description                                                      |
 | ---           | ---                                                              |
-| BAM_FILE      | Either a single bam file or a comma-seperated list of bam files. |
+| BAM_FILE      | Either a single bam file or a comma-separated list of bam files. |
 | HOW           | 'singularity' or 'docker'                                        |
 | BWAMEM        | '1' or '2' (bwamem or bwamem2)                                   |
 
@@ -27,7 +27,7 @@ There are some variables in the script that should be changed if necessary.
 
 ## Downloading reference files
 
-The hg38 reference files are hosted on the sanger ftp site.
+The hg38 reference files are hosted on the Sanger ftp site.
 
 ```bash
 ftp://ftp.sanger.ac.uk/pub/cancer/dockstore/human/GRCh38_hla_decoy_ebv/bwa_idx_GRCh38_hla_decoy_ebv_bwamem2.tar.gz
@@ -74,5 +74,3 @@ docker run \
 			-t ${CPU} \
 			-bwakit;
 ```
-
-## Output
