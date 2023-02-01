@@ -21,6 +21,7 @@ DATA_DIR="${HOME}/data"; # Directory containing the .bam and .bai files
 REF_DIR="${HOME}/ref"; # Directory to keep reference files
 WORKSPACE_DIR="${HOME}/workspace"; # Workspace and output directory
 CPU="8"; # Threads
+
 CGPMAP_VER="3.3.0"; # cgpmap version (3.3.0 for bwakit)
 MIN_SINGULARITY_VERSION="3.8.7";
 
