@@ -1,0 +1,15 @@
+load 'cgp_bigwig.wfl'
+load 'cgp_resultloader.wfl'
+def prm = new ConfigSlurper().parse(new File('cgp_bigwig.prm').toURL())
+prm = prm.toProperties()
+
+OUTDIR=prm.OUTDIR
+TUMOUR_BAM=prm.TUMOUR_BAM
+OUT_TM='bigwig_tm'
+
+Bpipe.run{
+  bigwig_bamToBw.using(OUT:"$OUTDIR", BAM:"$TUMOUR_BAM", OUTFILE:"$OUT_TM")+
+  bigwig_generateBw.using(OUT:"$OUTDIR", BAM:"$TUMOUR_BAM", OUTFILE:"$OUT_TM")+
+  canpipe_resultloader
+}
+

@@ -1,0 +1,80 @@
+load 'cgp_biobambam.prm'
+about title: "CGP biobambam bpipe workflow"
+
+def sing_pcapcore = "singularity exec --cleanenv --no-home --workdir $OUTDIR --pwd $OUTDIR --home $OUTDIR --bind $SCRATCH_ROOT:$SCRATCH_ROOT $SIF_PCAP_CORE"
+
+biobambam_scramble = {
+    doc title: "scramble CRAM to BAM and index the file",
+        desc:  "scramble step to convert CRAM to BAM format",
+        constraints: "N/A",
+        author: "cgpit@sanger.ac.uk"
+    produce("$OUTDIR/biobambam_scramble.${SAMPLE_NAME}.success"){
+        exec """
+        $sing_pcapcore samtools view -u -t $LSF_THREADS_SCRAMBLE -O bam -T $REFERENCE $OUTDIR/${SAMPLE_NAME}.cram >$OUTDIR/${SAMPLE_NAME}.bam
+        && touch $output
+        """, "lsf_SCRAMBLE"
+    }
+}
+
+biobambam_bamsort = {
+    doc title: "Sorts a bam/cram file and outputs",
+        desc:  "sort a bam.cram file using bamsort",
+        constraints: "N/A",
+        author: "cgpit@sanger.ac.uk"
+    produce("$OUTDIR/biobambam_bamsort.${SAMPLE_NAME}.success"){
+        exec """
+            $sing_pcapcore bamsort md5=1 md5filename=$OUTDIR/${SAMPLE_NAME}.md5 index=1 indexfilename=$OUTDIR/${SAMPLE_NAME}.bam.bai
+              inputformat=$FILE_TYPE outputformat=bam I=$OUTDIR/${SAMPLE_NAME}.download.${FILE_TYPE}
+              O=$OUTDIR/${SAMPLE_NAME}.bam reference=$REFERENCE
+            && touch $output
+        """, "lsf_BAMSORT"
+    }
+}
+
+biobambam_bamcollate2_rehead = {
+    doc title: "Collates and reheaders a bam/cram file and outputs bam, index and md5",
+        desc:  "scramble (for MD and NM tags) piped to samtools reheader to add a new header piped to bamcollate2 to get md5 and bam index files",
+        constraints: "N/A",
+        author: "cgpit@sanger.ac.uk"
+    produce("$OUTDIR/biobambam_bamcollate2_rehead.${SAMPLE_NAME}.success"){
+        exec """$sing_pcapcore bash -c '
+                set -e && set -o pipefail
+                && samtools view -u -O bam -T $REFERENCE $OUTDIR/${SAMPLE_NAME}.download.${FILE_TYPE}
+                | samtools reheader $OUTDIR/${SAMPLE_NAME}.newhead.sam -
+                | bamcollate2 exclude= collate=0 inputformat=bam reference=$REFERENCE md5=1
+                  md5filename=$OUTDIR/${SAMPLE_NAME}.md5 index=1 indexfilename=$OUTDIR/${SAMPLE_NAME}.bam.bai
+                  outputformat=bam replacereadgroupnames=$OUTDIR/${SAMPLE_NAME}.id.out
+                  O=$OUTDIR/${SAMPLE_NAME}.bam -
+            '
+            && touch $output
+        """, "lsf_BAMCOLLATE2"
+    }
+}
+
+biobambam_bamcollate2_rehead_no_ref = {
+    doc title: "Collates and reheaders a bam/cram file using the default reference in the header and outputs bam, index and md5",
+        desc:  "scramble (for MD and NM tags) piped to samtools reheader to add a new header piped to bamcollate2 to get md5 and bam index files",
+        constraints: "N/A",
+        author: "cgpit@sanger.ac.uk"
+    produce("$OUTDIR/biobambam_bamcollate2_rehead.${SAMPLE_NAME}.success"){
+        exec """$sing_pcapcore bash -c '
+                set -e && set -o pipefail
+                && samtools view -u -O bam $OUTDIR/${SAMPLE_NAME}.download.${FILE_TYPE}
+                | samtools reheader $OUTDIR/${SAMPLE_NAME}.newhead.sam -
+                | bamcollate2 exclude= collate=0 inputformat=bam md5=1
+                  md5filename=$OUTDIR/${SAMPLE_NAME}.md5 index=1 indexfilename=$OUTDIR/${SAMPLE_NAME}.bam.bai
+                  outputformat=bam replacereadgroupnames=$OUTDIR/${SAMPLE_NAME}.id.out
+                  O=$OUTDIR/${SAMPLE_NAME}.bam -
+            '
+            && touch $output
+        """, "lsf_BAMCOLLATE2"
+    }
+}
+
+biobambam_index = {
+    doc title: "Index bam file",
+        desc:  " optional step to index CRAM converted BAM file",
+        constraints: "N/A",
+        author: "cgpit@sanger.ac.uk"
+    exec "$sing_pcapcore bash -c 'bamindex < $OUTDIR/${SAMPLE_NAME}.bam > $OUTDIR/${SAMPLE_NAME}.bam.bai'"
+}

@@ -1,0 +1,4 @@
+load 'cgp_irods.wfl'
+Bpipe.run {
+irods_iget
+}

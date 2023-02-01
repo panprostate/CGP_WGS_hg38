@@ -1,0 +1,48 @@
+load 'cgp_gridss.prm'
+
+about title: "CASM GRIDSS implementation bpipe workflow"
+
+def sing_gridss = "singularity exec --cleanenv --no-home --workdir $OUTDIR --pwd $OUTDIR --home $OUTDIR --bind $SCRATCH_ROOT:$SCRATCH_ROOT $SIF_GRIDSS"
+def sing_pcap = "singularity exec --cleanenv --no-home --workdir $OUTDIR --pwd $OUTDIR --home $OUTDIR --bind $SCRATCH_ROOT:$SCRATCH_ROOT $SIF_PCAP_CORE"
+def gridss_sh = "gridss --externalaligner --reference $REFERENCE --blacklist $ENCODE_BLACKLIST --labels $TUMOUR_NAME --assembly $OUTDIR/${TUMOUR_NAME}.gridss.bam --output $OUTDIR/${TUMOUR_NAME}.gridss.vcf.gz --workingdir $OUTDIR/gridss_tmp"
+
+gridss_preprocess = {
+  doc title: "GRIDSS SV caller",
+      desc:  "preprocess step for GRIDSS",
+      constraints: "N/A",
+      author: "cgpit@sanger.ac.uk"
+  // doesn't seem to like striping in working directory so we create the folder and turn it off (as inherited)
+  exec """
+      rm -f $OUTDIR/gridss_tmp/*.bam.gridss.working/tmp.*.bam.namedsorted-tmp.*.bam
+      && $sing_gridss $gridss_sh --threads $LSF_THREADS_PREPROCESS --steps preprocess $TUMOUR_BAM
+      && version_from_sif.pl $SIF_GRIDSS > gridss_preprocess.version
+      && date >$output.track
+  """, """lsf_PREPROCESS"""
+}
+
+gridss_assemble = {
+  doc title: "GRIDSS SV caller",
+      desc:  "assemble step for GRIDSS, verifies version against preprocess step",
+      constraints: "N/A",
+      author: "cgpit@sanger.ac.uk"
+  exec """
+      $sing_gridss $gridss_sh --threads $LSF_THREADS_ASSEMBLE --steps assemble $TUMOUR_BAM
+      && version_from_sif.pl $SIF_GRIDSS > gridss_assemble.version
+      && diff gridss_preprocess.version gridss_assemble.version
+      && date >$output.track
+  """, """lsf_ASSEMBLE"""
+}
+
+gridss_call = {
+  doc title: "GRIDSS SV caller",
+      desc:  "call step for GRIDSS, verifies version against assemble step",
+      constraints: "N/A",
+      author: "cgpit@sanger.ac.uk"
+  exec """
+      $sing_gridss $gridss_sh --threads $LSF_THREADS_CALL --steps call $TUMOUR_BAM
+      && version_from_sif.pl $SIF_GRIDSS > gridss_call.version
+      && diff gridss_assemble.version gridss_assemble.version
+      && $sing_pcap samtools index $OUTDIR/${TUMOUR_NAME}.gridss.bam
+      && date >$output.track
+  """, """lsf_CALL"""
+}

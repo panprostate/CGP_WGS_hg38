@@ -1,0 +1,12 @@
+load 'cgp_bammarkduplicates.wfl'
+load 'cgp_resultloader.wfl'
+load 'cgp_coverage.wfl'
+load 'cgp_baitappend.wfl'
+
+Bpipe.run {
+  bammarkduplicates2_stage+
+  bammarkduplicates2_multi+
+  generate_coverage+
+  baitappend+
+  canpipe_resultloader
+}

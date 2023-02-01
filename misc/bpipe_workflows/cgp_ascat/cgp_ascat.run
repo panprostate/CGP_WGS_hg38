@@ -1,0 +1,8 @@
+load 'cgp_resultloader.wfl'
+load 'cgp_ascat.wfl'
+Bpipe.run{
+	ascat_allele_count+
+	ascat_ascat+
+	ascat_finalise+
+	canpipe_resultloader
+}

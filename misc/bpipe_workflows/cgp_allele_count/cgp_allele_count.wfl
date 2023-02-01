@@ -1,0 +1,66 @@
+load 'cgp_allele_count.prm'
+about title: "CGP allele count bpipe workflow"
+
+def sing_allelecount = "singularity exec --cleanenv --no-home --workdir $OUTDIR --pwd $OUTDIR --home $OUTDIR --bind $SCRATCH_ROOT:$SCRATCH_ROOT $SIF_ALLELECOUNT "
+
+allelecounter_run = {
+    doc title: "run - allele counter",
+        desc:  "Run step for alleleCounter.pl",
+        constraints: "N/A",
+        author: "cgpit@sanger.ac.uk"
+    produce("$OUTDIR/allelecounter_run.${SAMPLE_NAME}.success"){
+        exec """export SINGULARITYENV_PCAP_THREADED_REM_LOGS=1
+            && $sing_allelecount bash -c '
+                alleleCounter -o $OUTDIR/${SAMPLE_NAME}.ac -b $INPUTDIR/${SAMPLE_NAME}.bam -l $LOCI
+                && alleleCounter -v > allelecount.version
+            '
+            && touch $output
+            """ , "lsf_ALLELE_COUNT"
+    }
+}
+
+allelecounter_genotyping = {
+    doc title: "allele counter - Counts of each allele present at each loci provided in the locus files, where they are named genotype_snps,gender_snps",
+        desc:  "Run step for alleleCounter",
+        constraints: "N/A",
+        author: "cgpit@sanger.ac.uk"
+    produce("$OUTDIR/allelecounter_genotyping.${SAMPLE_NAME}.success"){
+      exec """
+            $sing_allelecount bash -c '
+                alleleCounter -o $OUTDIR/${SAMPLE_NAME}.genotypes.tab -b $OUTDIR/${SAMPLE_NAME}.bam -m $MINQUAL -q $MAPQUAL -l ${LOCUS}/general.tsv 
+                && alleleCounter -o $OUTDIR/${SAMPLE_NAME}.gender.tab -b $OUTDIR/${SAMPLE_NAME}.bam -m $MINQUAL -q $MAPQUAL -l ${LOCUS}/gender.srt.tsv 
+                && alleleCounterToJson.pl -l ${LOCUS}/general.tsv -a $OUTDIR/${SAMPLE_NAME}.genotypes.tab -o ${OUTDIR}/${SAMPLE_NAME}.genotypes.json 
+                && alleleCounterToJson.pl -l ${LOCUS}/gender.srt.tsv -a $OUTDIR/${SAMPLE_NAME}.gender.tab -o ${OUTDIR}/${SAMPLE_NAME}.gender.json 
+                && bgzip -c $OUTDIR/${SAMPLE_NAME}.gender.tab > $OUTDIR/${SAMPLE_NAME}.gender.tab.gz 
+                && bgzip -c $OUTDIR/${SAMPLE_NAME}.genotypes.tab > $OUTDIR/${SAMPLE_NAME}.genotypes.tab.gz 
+                && tabix -s 1 -b 2 -e 2 $OUTDIR/${SAMPLE_NAME}.gender.tab.gz 
+                && tabix -s 1 -b 2 -e 2 $OUTDIR/${SAMPLE_NAME}.genotypes.tab.gz 
+                && alleleCounter -v > allelecount.version
+            '
+            && touch $output
+            """ , "lsf_ALLELE_COUNT_GENOTYPE"
+  }
+}
+
+allelecounter_genotyping_stage = {
+    doc title: "allele counter - Counts of each allele present at each loci provided in the locus files, where they are named genotype_snps,gender_snps",
+        desc:  "Run step for alleleCounter",
+        constraints: "N/A",
+        author: "cgpit@sanger.ac.uk"
+    produce("$OUTDIR/allelecounter_genotyping.${SAMPLE_NAME}.success"){
+      exec """
+            $sing_allelecount bash -c '
+                alleleCounter -o $OUTDIR/${SAMPLE_NAME}.genotypes.tab -b $TUMOUR_BAM -m $MINQUAL -q $MAPQUAL -l ${LOCUS}/general.tsv 
+                && alleleCounter -o $OUTDIR/${SAMPLE_NAME}.gender.tab -b $TUMOUR_BAM -m $MINQUAL -q $MAPQUAL -l ${LOCUS}/gender.srt.tsv 
+                && alleleCounterToJson.pl -l ${LOCUS}/general.tsv -a $OUTDIR/${SAMPLE_NAME}.genotypes.tab -o ${OUTDIR}/${SAMPLE_NAME}.genotypes.json 
+                && alleleCounterToJson.pl -l ${LOCUS}/gender.srt.tsv -a $OUTDIR/${SAMPLE_NAME}.gender.tab -o ${OUTDIR}/${SAMPLE_NAME}.gender.json 
+                && bgzip -c $OUTDIR/${SAMPLE_NAME}.gender.tab > $OUTDIR/${SAMPLE_NAME}.gender.tab.gz 
+                && bgzip -c $OUTDIR/${SAMPLE_NAME}.genotypes.tab > $OUTDIR/${SAMPLE_NAME}.genotypes.tab.gz 
+                && tabix -s 1 -b 2 -e 2 $OUTDIR/${SAMPLE_NAME}.gender.tab.gz 
+                && tabix -s 1 -b 2 -e 2 $OUTDIR/${SAMPLE_NAME}.genotypes.tab.gz 
+                && alleleCounter -v > allelecount.version
+            '
+            && touch $output
+            """ , "lsf_ALLELE_COUNT_GENOTYPE"
+  }
+}

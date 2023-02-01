@@ -1,0 +1,17 @@
+load 'cgp_lane_bam.wfl'
+load 'cgp_mismatchqc.wfl'
+load 'cgp_biobambam.wfl'
+load 'cgp_bamstats.wfl'
+load 'cgp_allele_count.wfl'
+load 'cgp_reheadcram.wfl'
+load 'cgp_resultloader.wfl'
+
+Bpipe.run {
+lane_bam_streamrg+
+reheadcram_newheader+
+biobambam_bamcollate2_rehead+
+mismatchqc+
+mismatchqc_rename_bam+
+[bamstats_stats,allelecounter_genotyping]+
+canpipe_resultloader
+}

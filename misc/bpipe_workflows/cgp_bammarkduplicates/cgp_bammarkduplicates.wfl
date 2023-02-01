@@ -1,0 +1,50 @@
+load 'cgp_bammarkduplicates.prm'
+
+def sing_pcapcore = "singularity exec --cleanenv --no-home --workdir $OUTDIR --pwd $OUTDIR --home $OUTDIR --bind $SCRATCH_ROOT:$SCRATCH_ROOT $SIF_PCAP_CORE "
+
+bammarkduplicates2_stage = {
+    doc title: "Copy the the existing SAMPLE BAM file if available",
+        desc:  "Copy the the existing SAMPLE BAM file if available",
+        constraints: "N/A",
+        author: "cgpit@sanger.ac.uk"
+    if("$ORIG_SAMPLE_BAM" == "") {
+        produce("$OUTDIR/optional_stage.success"){
+            exec """
+                echo "No existing merged BAM, no work to do." && date > $OUTDIR/$output
+             """, """lsf_TOUCH"""
+         }
+    } else {
+        produce("$OUTDIR/optional_stage.success"){
+            exec """
+                stageFiles.pl -i ${ORIG_SAMPLE_BAM} -o $OUTDIR/${SAMPLE_NAME}.existing.bam
+                && date > $OUTDIR/$output
+             """, """lsf_bammarkduplicates_stage"""
+         }
+    }
+}
+
+bammarkduplicates2_multi = {
+    doc title: "Run merge_or_mark for >=1 input files",
+        desc:  "Merge or mark duplicates for >=1 inputs",
+        constraints: "N/A",
+        author: "cgpit@sanger.ac.uk"
+    produce("$OUTDIR/bammarkduplicates2_multi.${SAMPLE_NAME}.success") {
+        INFILEPATHS=""
+        if("$ORIG_SAMPLE_BAM" != "") {
+            INFILEPATHS = "$OUTDIR/${SAMPLE_NAME}.existing.bam"
+        }
+        def id_ap_lanes = INFILES.split(' ')
+        for (id_ap_lane in id_ap_lanes.sort()) {
+            infile = LANEDIR + '/' + ID_INT_PROJECT + '_' + id_ap_lane + '/' + id_ap_lane + '.bam'
+            INFILEPATHS += " " + infile
+        }
+        exec """$sing_pcapcore bash -c '
+                merge_or_mark.pl -dupmode ${MARKDUP_MODE} -s ${SAMPLE_NAME} -o $OUTDIR -r ${REFERENCE} -t ${LSF_THREADS_BAMMARKDUPS} ${INFILEPATHS}
+                && bgzip -c $OUTDIR/${SAMPLE_NAME}.bam.met > $OUTDIR/${SAMPLE_NAME}.bam.met.gz
+                && merge_or_mark.pl -v > pcapcore-mergemark.version
+                && bam_stats -v > pcapcore-bamstats.version
+            '
+            && touch $output
+        """, "lsf_bammarkduplicates_multi"
+    }
+}

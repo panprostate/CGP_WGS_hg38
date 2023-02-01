@@ -1,0 +1,6 @@
+load 'cgp_coverage.prm'
+load 'cgp_coverage.wfl'
+
+Bpipe.run{
+	generate_coverage
+}

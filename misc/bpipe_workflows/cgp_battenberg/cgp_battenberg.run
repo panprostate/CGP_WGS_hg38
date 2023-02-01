@@ -1,0 +1,15 @@
+load 'cgp_battenberg.wfl'
+load 'cgp_resultloader.wfl'
+
+Bpipe.run{
+  battenberg_splitlocifiles+
+  battenberg_allelecount+
+  battenberg_concatallelecount_baflog_gccorr+
+  battenberg_imputefromaf_impute_combine+
+  battenberg_haplotypebafs_postbafclean_plothap+
+  battenberg_combinebafs_segphased+
+  battenberg_fitcn_subclones+
+  battenberg_finalise+
+  battenberg_cn+
+  canpipe_resultloader
+}

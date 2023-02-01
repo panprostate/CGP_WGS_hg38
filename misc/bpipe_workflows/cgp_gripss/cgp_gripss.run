@@ -1,0 +1,6 @@
+load 'cgp_resultloader.wfl'
+load 'cgp_gripss.wfl'
+Bpipe.run{
+	gripss_gripss+
+	canpipe_resultloader
+}

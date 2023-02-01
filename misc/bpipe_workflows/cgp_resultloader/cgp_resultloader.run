@@ -1,0 +1,4 @@
+load 'cgp_resultloader.wfl'
+Bpipe.run{
+canpipe_resultloader
+}

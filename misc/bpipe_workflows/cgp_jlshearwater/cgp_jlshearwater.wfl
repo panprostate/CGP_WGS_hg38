@@ -1,0 +1,46 @@
+load 'cgp_jlshearwater.prm'
+
+about title: "jlShearwater count flow"
+
+def sing_jlshearwater = "singularity exec --cleanenv --no-home --workdir $OUTDIR --pwd $OUTDIR --home $OUTDIR --bind $SCRATCH_ROOT:$SCRATCH_ROOT $SIF_JLSHEARWATER "
+
+jlshearwater_split = {
+  doc title: "jlShearwater - split step",
+      desc:  "Generates genome bins",
+      constraints: "N/A",
+      author: "cgpit@sanger.ac.uk"
+  exec """
+      mkdir -p $OUTDIR/version_files
+      && $sing_jlshearwater runShearwater.jl split -g ${REFERENCE} -d ${HIGH_DEPTH_REGIONS} -b ${JLSW_GAPS} --exclude ${EXCLUDE_CONTIGS}
+      && version_from_sif.pl $SIF_JLSHEARWATER > $OUTDIR/version_files/jlsw_split.version
+      && date > $output.track
+    """, """lsf_JLSW_SPLIT"""
+}
+
+jlshearwater_count = {
+  doc title: "jlShearwater - counts steps",
+      desc:  "Runs counting on each bin based on job index",
+      constraints: "N/A",
+      author: "cgpit@sanger.ac.uk"
+  exec """
+      mkdir -p $OUTDIR/version_files
+      && $sing_jlshearwater runShearwater.jl count -g ${REFERENCE} --path-tmpDir ${OUTDIR} -i \$LSB_JOBINDEX -c ${LSF_ARRAY_END_JLSW_COUNT} ${TUMOUR_BAM}
+      && version_from_sif.pl $SIF_JLSHEARWATER > $OUTDIR/version_files/jlsw_count.${LSB_JOBINDEX}.version
+      && date > $output.track
+    """, """lsf_JLSW_COUNT"""
+}
+
+jlshearwater_gathercount = {
+  doc title: "jlShearwater - gather counts step",
+      desc:  "Merges the count files into one",
+      constraints: "N/A",
+      author: "cgpit@sanger.ac.uk"
+  exec """
+      mkdir -p $OUTDIR/version_files
+      && $sing_jlshearwater runShearwater.jl gather count -n ${LSF_ARRAY_END_JLSW_COUNT} -o ${OUTDIR} --path-tmpDir ${OUTDIR} -s ${TUMOUR_NAME}
+      && version_from_sif.pl $SIF_JLSHEARWATER > $OUTDIR/version_files/jlsw_gathercounts.version
+      && echo -n 'Validating all versions against split step version: ' && cat $OUTDIR/version_files/jlsw_split.version
+      && ls -1 $OUTDIR/version_files/*.version | xargs -I {} diff $OUTDIR/version_files/jlsw_split.version {}
+      && date > $output.track
+    """, """lsf_JLSW_GATHERCOUNT"""
+}

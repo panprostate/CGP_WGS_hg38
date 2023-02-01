@@ -1,0 +1,55 @@
+load 'cgp_bwamem.prm'
+
+about title: """CGP bwa_mem reference implementation bpipe config"""
+
+def sing_pcapcore = "singularity exec --cleanenv --no-home --workdir $OUTDIR --pwd $OUTDIR --home $OUTDIR --bind $SCRATCH_ROOT:$SCRATCH_ROOT $SIF_PCAP_CORE "
+def bwa_mem_base = "bwa_mem.pl $BWAMEM2_FLAG -dupmode $MARKDUP_MODE -b '-T 30 -Y' -o $OUTDIR -r $REFERENCE -s $SAMPLE_SYNONYM -f $FRAGMENT -q -qf $MMQCFRAC"
+
+bwamem_setup_split = {
+    doc title: "split - bwa_mem alignment - setup and split",
+        desc:  "Setup and split step for bwa_mem.pl",
+        constraints: "Requires setup step to have been run",
+        author: "cgpit@sanger.ac.uk"
+    exec """export SINGULARITYENV_PCAP_THREADED_REM_LOGS=1
+        && $sing_pcapcore bash -c "
+            $bwa_mem_base -p setup $BWAMEM_INPUTFILE
+            && $bwa_mem_base -p split -t $LSF_THREADS_SETUP_SPLIT $BWAMEM_INPUTFILE
+            && bwa_mem.pl -v > pcapcore-bwamem.version
+        "
+        && date >$output.track
+    """, "lsf_SETUP_SPLIT"
+}
+
+bwamem_bwamem = {
+    doc title: "bwa_mem - bwa_mem alignment - mapping",
+        desc:  "bwa_mem mapping step for bwa_mem.pl",
+        constraints: "Requires setup and split step to have been run",
+        author: "cgpit@sanger.ac.uk"
+    exec """export SINGULARITYENV_PCAP_THREADED_REM_LOGS=1 && export SINGULARITY_UNSHARE_IPC=1
+        && $sing_pcapcore $bwa_mem_base -t $LSF_THREADS_BWAMEM -mt $LSF_THREADS_BWAMEM -p bwamem $BWAMEM_INPUTFILE
+        && date >$output.track
+    """, "lsf_BWAMEM"
+}
+
+bwamem_mark = {
+    doc title: "mark - bwa_mem alignment - mark duplicates",
+        desc:  "Mark duplicates step for bwa_mem.pl",
+        constraints: "Requires mapped bam file from bwamem step",
+        author: "cgpit@sanger.ac.uk"
+    exec """export SINGULARITYENV_PCAP_THREADED_REM_LOGS=1
+        && $sing_pcapcore $bwa_mem_base -t $LSF_THREADS_MARK -p mark $BWAMEM_INPUTFILE
+        && $sing_pcapcore $bwa_mem_base -p stats $BWAMEM_INPUTFILE
+        && date >$output.track""", "lsf_MARK"
+}
+
+bwamem_mv_bam = {
+    doc title: "rename bam - bwa_mem alignment - rename bam",
+        desc:  "rename temporarily named bam, bai, md5 , met, bas file to final name based on the ID_AP_LANE",
+        author:  "cgpit@sanger.ac.uk"
+    exec """mv $OUTDIR/${SAMPLE_SYNONYM}.bam $OUTDIR/${SAMPLE_NAME}.bam
+        && mv $OUTDIR/${SAMPLE_SYNONYM}.bam.bai $OUTDIR/${SAMPLE_NAME}.bam.bai
+        && mv $OUTDIR/${SAMPLE_SYNONYM}.bam.md5 $OUTDIR/${SAMPLE_NAME}.bam.md5
+        && mv $OUTDIR/${SAMPLE_SYNONYM}.bam.met $OUTDIR/${SAMPLE_NAME}.bam.met
+        && mv $OUTDIR/${SAMPLE_SYNONYM}.bam.bas $OUTDIR/${SAMPLE_NAME}.bam.bas
+        && date >$output.track""", "lsf_MOVE"
+}

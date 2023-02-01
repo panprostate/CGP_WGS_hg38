@@ -1,0 +1,15 @@
+load 'cgp_resultloader.prm'
+
+about title: "CGP ascat implementation bpipe workflow"
+
+canpipe_resultloader = {
+	doc title: "canpipe_resultLoader $ALGORITHM",
+			desc:  "Analysis Results Loader loadResults.pl",
+			constraints: "N/A",
+			author: "cgpit@sanger.ac.uk"
+	exec """loadResults.pl -c $INI_PATH -db $DB_TYPE -a $ALGORITHM -o $OUTDIR -sn $SAMPLE_NAME
+					-tn $TUMOUR_NAME -nn $NORMAL_NAME -pid $ID_INT_PROJECT -nid $NORMAL_ID -tid $TUMOUR_ID -npid $ID_INT_PROJECT_NORMAL
+					-idf $FIELD_VAL -ft $FIELD_TYPE -l $LOG4PERL && date >$output.track """, "lsf_loadresults"
+
+}
+

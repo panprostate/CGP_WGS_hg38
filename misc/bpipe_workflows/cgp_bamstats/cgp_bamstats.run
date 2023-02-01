@@ -1,0 +1,6 @@
+load 'cgp_bamstats.wfl'
+
+Bpipe.run{
+	bamstats_stats
+}
+

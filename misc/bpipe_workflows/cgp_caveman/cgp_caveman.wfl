@@ -1,0 +1,86 @@
+load 'cgp_caveman.prm'
+about title: "CGP CaVEMan bpipe workflow"
+
+def sing_cavewrap = "export SINGULARITYENV_PCAP_THREADED_REM_LOGS=1 && singularity exec --cleanenv --no-home --workdir $OUTDIR --pwd $OUTDIR --home $OUTDIR --bind $REF_ROOT:$REF_ROOT --bind $SCRATCH_ROOT:$SCRATCH_ROOT $SIF_CGPCAVEMANWRAPPER "
+def caveman_pl = "caveman.pl -e $READS_PER_SPLIT -o $OUTDIR -r ${OUTDIR}/genome.fa.fai -tb $TUMOUR_BAM -nb $NORMAL_BAM -ig ${OUTDIR}/${refBase}/core_ref/genome.gap.tab -tc $TUMOUR_CN -nc $NORMAL_CN -s $SPECIES -sa $SPECIES_ASSEMBLY -b ${OUTDIR}/${refBase}/caveman_flagging_ref/flagging/ -u ${OUTDIR}/${refBase}/caveman/ -st $SEQ_TYPE -k $NORMAL_CONTAMINATION -np $NORMAL_PROTOCOL -tp $TUMOUR_PROTOCOL -c ${OUTDIR}/${refBase}/flag.vcf.config.* -f ${OUTDIR}/${refBase}/caveman_flagging_flag_config_ref.ini -a $ID_ANALYSIS_PROC -td $TUMOUR_CN_DEF -nd $NORMAL_CN_DEF -pm $PRIOR_PROB_MUT -ps $PRIOR_PROB_SNP "
+
+caveman_setup = {
+    doc title: "caveman - fai creation and setup",
+            desc:  "setup step for caveman.pl",
+            constraints: "N/A",
+            author: "cgpit@sanger.ac.uk"
+    exec """
+        mkdir -p $OUTDIR && ln -fs ${OUTDIR}/${refBase}/core_ref/genome.fa $OUTDIR/ && grep -vFwf ${OUTDIR}/${refBase}/caveman_ref/ignore_contigs_caveman.txt ${OUTDIR}/${refBase}/core_ref/genome.fa.fai > ${OUTDIR}/genome.fa.fai
+        && $sing_cavewrap $caveman_pl -p setup -i 1 -t $LSF_THREADS_SETUP
+        && date >$output.track
+    """, "lsf_SETUP"
+}
+caveman_split = {
+    doc title: "caveman - split",
+            desc:  "split step for caveman.pl",
+            constraints: "N/A",
+            author: "cgpit@sanger.ac.uk"
+    exec """$sing_cavewrap $caveman_pl -p split -i \$LSB_JOBINDEX -t $LSF_THREADS_SPLIT && date >$output.track""", "lsf_SPLIT"
+}
+caveman_split_concat = {
+    doc title: "caveman - split_concat",
+            desc:  "split_concat step for caveman.pl",
+            constraints: "N/A",
+            author: "cgpit@sanger.ac.uk"
+    exec """$sing_cavewrap $caveman_pl -p split_concat -i 1 -t $LSF_THREADS_CONCAT && date >$output.track""" , "lsf_CONCAT"
+}
+
+// step needs bsub from config
+caveman_mstep = {
+    doc title: "caveman - mstep",
+            desc:  "mstep step for caveman.pl",
+            constraints: "N/A",
+            author: "cgpit@sanger.ac.uk"
+    exec """$sing_cavewrap $caveman_pl -p mstep -i \$LSB_JOBINDEX -t $LSF_THREADS_MSTEP -limit \$LSB_JOBINDEX_END && date >$output.track""", "lsf_MSTEP"
+}
+caveman_merge = {
+    doc title: "caveman - merge",
+            desc:  "merge step for caveman.pl",
+            constraints: "N/A",
+            author: "cgpit@sanger.ac.uk"
+    exec """$sing_cavewrap $caveman_pl -p merge -i 1 -t $LSF_THREADS_MERGE && date >$output.track""" , "lsf_MERGE"
+}
+// step need bsub from config
+caveman_estep = {
+    doc title: "caveman - estep",
+            desc:  "estep step for caveman.pl",
+            constraints: "N/A",
+            author: "cgpit@sanger.ac.uk"
+    exec """$sing_cavewrap $caveman_pl -p estep -i \$LSB_JOBINDEX -t $LSF_THREADS_ESTEP -limit \$LSB_JOBINDEX_END && date >$output.track""" , "lsf_ESTEP"
+}
+caveman_merge_results = {
+    doc title: "caveman - merge_results",
+            desc:  "merge_results step for caveman.pl",
+            constraints: "N/A",
+            author: "cgpit@sanger.ac.uk"
+    exec """
+        $sing_cavewrap bash -c '
+            $caveman_pl -p merge_results -i 1 -t $LSF_THREADS_MERGE_RESULTS
+            && $caveman_pl -p add_ids -i 1 -t $LSF_THREADS_MERGE_RESULTS -noflag -noclean
+            && caveman -v > caveman_C.version
+            && bgzip -c $OUTDIR/tmpCaveman/${TUMOUR_NAME}_vs_${NORMAL_NAME}.muts.ids.vcf > $OUTDIR/${TUMOUR_NAME}_vs_${NORMAL_NAME}.muts.ids.vcf.gz
+            && tabix -f -p vcf $OUTDIR/${TUMOUR_NAME}_vs_${NORMAL_NAME}.muts.ids.vcf.gz
+            && bgzip -c $OUTDIR/tmpCaveman/${TUMOUR_NAME}_vs_${NORMAL_NAME}.snps.ids.vcf > $OUTDIR/${TUMOUR_NAME}_vs_${NORMAL_NAME}.snps.ids.vcf.gz
+            && tabix -f -p vcf $OUTDIR/${TUMOUR_NAME}_vs_${NORMAL_NAME}.snps.ids.vcf.gz
+            && bgzip -c $OUTDIR/tmpCaveman/${TUMOUR_NAME}_vs_${NORMAL_NAME}.no_analysis.bed > $OUTDIR/${TUMOUR_NAME}_vs_${NORMAL_NAME}.no_analysis.bed.gz
+            && tabix -f -p bed $OUTDIR/${TUMOUR_NAME}_vs_${NORMAL_NAME}.no_analysis.bed.gz
+        '
+        && ln -f $OUTDIR/tmpCaveman/caveman.cfg.ini $OUTDIR/caveman.cfg.ini
+        && ln -f $OUTDIR/tmpCaveman/alg_bean $OUTDIR/alg_bean
+        && ln -f $OUTDIR/tmpCaveman/prob_arr $OUTDIR/prob_arr
+        && ln -f $OUTDIR/tmpCaveman/cov_arr $OUTDIR/cov_arr
+        && ln -f $OUTDIR/tmpCaveman/splitList $OUTDIR/splitList
+        && vcfVerify.pl -i $OUTDIR/${TUMOUR_NAME}_vs_${NORMAL_NAME}.muts.ids.vcf.gz
+        && checksums.pl -c md5 -c sha256 -i $OUTDIR/${TUMOUR_NAME}_vs_${NORMAL_NAME}.muts.ids.vcf.gz
+        && checksums.pl -c md5 -c sha256 -i $OUTDIR/${TUMOUR_NAME}_vs_${NORMAL_NAME}.muts.ids.vcf.gz.tbi
+        && checksums.pl -c md5 -c sha256 -i $OUTDIR/${TUMOUR_NAME}_vs_${NORMAL_NAME}.snps.ids.vcf.gz
+        && checksums.pl -c md5 -c sha256 -i $OUTDIR/${TUMOUR_NAME}_vs_${NORMAL_NAME}.snps.ids.vcf.gz.tbi
+        && checksums.pl -c md5 -c sha256 -i $OUTDIR/${TUMOUR_NAME}_vs_${NORMAL_NAME}.no_analysis.bed.gz
+        && checksums.pl -c md5 -c sha256 -i $OUTDIR/${TUMOUR_NAME}_vs_${NORMAL_NAME}.no_analysis.bed.gz.tbi
+        && date >$output.track """, "lsf_MERGE_RESULTS"
+}

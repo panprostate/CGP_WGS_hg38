@@ -1,0 +1,6 @@
+load 'cgp_resultloader.wfl'
+load 'cgp_ascatcounts.wfl'
+Bpipe.run{
+	ascat_acsatcounts+
+	canpipe_resultloader
+}

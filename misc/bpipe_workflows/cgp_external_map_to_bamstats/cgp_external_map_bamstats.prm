@@ -1,0 +1,5 @@
+LSF_JOB_NAME="bp_externalRemapBamstats"
+INPUTFILE=""
+OUTDIR=""
+SAMPLE_NAME=""
+FILE_TYPE=""

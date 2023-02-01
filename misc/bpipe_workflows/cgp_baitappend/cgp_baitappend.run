@@ -1,0 +1,6 @@
+load 'cgp_baitappend.prm'
+load 'cgp_baitappend.wfl'
+
+Bpipe.run{
+	baitappend
+}

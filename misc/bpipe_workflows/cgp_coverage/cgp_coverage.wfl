@@ -1,0 +1,20 @@
+load 'cgp_coverage.prm'
+about title: "CGP coverage generation script"
+
+def sing_pcapcore = "singularity exec --cleanenv --no-home --workdir $OUTDIR --pwd $OUTDIR --home $OUTDIR --bind $SCRATCH_ROOT:$SCRATCH_ROOT $SIF_PCAP_CORE "
+
+generate_coverage = {
+    doc title: "PCAP-core - coverage generation script",
+        desc:  "Generates coverage info",
+        constraints: "Requires mapped, sorted, indexed bam/cram file alongside a bed/gff3 file of targets.",
+        author: "cgpit@sanger.ac.uk"
+    produce("$OUTDIR/generate_coverage.${SAMPLE_NAME}.success"){
+        exec """
+            $sing_pcapcore bash -c '
+                xam_coverage_bins.pl -f $OUTDIR/${SAMPLE_NAME}.bam -o $OUTDIR/${SAMPLE_NAME}.cvg -r $TARGET_BED -t bed
+                && xam_coverage_bins.pl -v > pcapcore-xamcoverage.version
+            '
+            && touch $output
+        """, "lsf_COVERAGE"
+    }
+}

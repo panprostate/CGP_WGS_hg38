@@ -1,0 +1,9 @@
+load 'cgp_brass.wfl'
+load 'cgp_resultloader.wfl'
+
+Bpipe.run{
+    brass_samp_stats+
+    [brass_input,brass_cover]+
+    brass_therest+
+    canpipe_resultloader
+}

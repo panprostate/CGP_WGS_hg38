@@ -1,0 +1,22 @@
+load 'cgp_ascatcounts.prm'
+
+about title: "CGP ascatCounts implementation bpipe workflow"
+
+def sing_ascat = "singularity exec --cleanenv --no-home --workdir $OUTDIR --pwd $OUTDIR --home $OUTDIR --bind $SCRATCH_ROOT:$SCRATCH_ROOT $SIF_ASCATNGS "
+
+ascat_acsatcounts = {
+  doc title: "allele_count - Ascat NGS - allele_count",
+      desc:  "Allele count step for ascat.pl",
+      constraints: "N/A",
+      author: "cgpit@sanger.ac.uk"
+  if("$USER_DEC" != "accept" && "$USER_DEC" != "rerun"){
+    exec """
+        export SINGULARITYENV_PCAP_THREADED_REM_LOGS=1
+        && $sing_ascat bash -c '
+          ascatCounts.pl -o $OUTDIR -b $TUMOUR_BAM -r $REFERENCE -sg $SNP_GC -l $GENDER_LOCI -c $LSF_THREADS_ASCATCOUNTS
+          && ascatCounts.pl -v > ascatcounts.version
+        '
+        && date >$output.track
+      """, """lsf_ASCATCOUNTS"""
+  }
+}

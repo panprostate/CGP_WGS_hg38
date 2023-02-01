@@ -1,0 +1,10 @@
+load 'cgp_vagrent.wfl'
+load 'cgp_splot.wfl'
+load 'cgp_resultloader.wfl'
+
+Bpipe.run{
+	vagrent_AnnotateVcf+
+  splot_VcfToJson+
+  canpipe_resultloader
+}
+

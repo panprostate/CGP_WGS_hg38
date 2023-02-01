@@ -1,0 +1,20 @@
+load 'cgp_telbam.prm'
+
+about title: "CASM GRIDSS implementation bpipe workflow"
+
+def sing_telcat = "singularity exec --cleanenv --no-home --workdir $OUTDIR --pwd $OUTDIR --home $OUTDIR --bind $SCRATCH_ROOT:$SCRATCH_ROOT $SIF_TELOMERECAT"
+
+telomerecat_telbam = {
+  doc title: "telomerecat bam2telbamstep",
+      desc:  "generate a TELBAM from a parent BAM file",
+      constraints: "N/A",
+      author: "cgpit@sanger.ac.uk"
+  exec """
+      mkdir -p $OUTDIR/telbam_tmp
+      && rm -f $OUTDIR/${SAMPLE_NAME}_telbam.bam
+      && $sing_telcat telomerecat bam2telbam --reference $REFERENCE -p $LSF_THREADS_TELBAM --temp_dir $OUTDIR/telbam_tmp --outbam_dir $OUTDIR $TUMOUR_BAM
+      && version_from_sif.pl $SIF_TELOMERECAT > telbam.version
+      && ln $OUTDIR/${TUMOUR_ID}_telbam.bam $OUTDIR/${SAMPLE_NAME}_telbam.bam
+      && date >$output.track
+  """, """lsf_TELBAM"""
+}

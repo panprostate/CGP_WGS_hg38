@@ -1,0 +1,66 @@
+load 'cgp_brass.prm'
+
+about title: """CGP brass reference implementation bpipe workflow """
+
+def sing_brass = "singularity exec --cleanenv --no-home --workdir $OUTDIR --pwd $OUTDIR --home $OUTDIR --bind $SCRATCH_ROOT:$SCRATCH_ROOT $SIF_BRASS "
+// expand any params that have embedded variables
+GENOME_CACHE = "$GENOME_CACHE"
+
+brass_samp_stats = {
+  doc title: "generate samp stats - brass step",
+    desc:  "Generate sample stats file for brass.pl",
+    constraints: "NA",
+    author: "cgpit@sanger.ac.uk"
+  exec """
+      echo "Ploidy "$PLOIDY > $ASCAT_SAMP_STATS &&
+      echo "rho "$RHO >> $ASCAT_SAMP_STATS &&
+      echo "GenderChr "$GENDERCHR >> $ASCAT_SAMP_STATS &&
+      echo "GenderChrFound "$GENDERCHRFOUND >> $ASCAT_SAMP_STATS
+      """, """lsf_SAMP_STATS"""
+}
+
+brass_input = {
+        doc title: "input - brass step",
+            desc:  "input step for brass.pl",
+                        constraints: "NA",
+                        author: "cgpit@sanger.ac.uk"
+       exec """export SINGULARITYENV_PCAP_THREADED_REM_LOGS=1
+              && $sing_brass
+              brass.pl -c $LSF_THREADS_INPUT -o $OUTDIR -s $SPECIES -as $SPECIES_ASSEMBLY
+              -depth $IGNORE_DEPTH -filter $NORMAL_PANEL_GROUPS -genome $REFERENCE -g_cache $GENOME_CACHE
+              -tn $TUMOUR_NAME -nn $NORMAL_NAME -t $TUMOUR_BAM -n $NORMAL_BAM -protocol $SEQ_PROTOCOL
+              -viral $BRASS_VIRAL_DB -microbe $BRASS_MICROBE_DB_STUB -gcbins $BRASS_GC_BINS -centtel $BRASS_CENT_TEL -sampstat $ASCAT_SAMP_STATS
+              -p input -cb $BRASS_CYTOBAND -i \$LSB_JOBINDEX
+       && date >$output.track """, """lsf_INPUT"""
+}
+
+brass_cover = {
+        doc title: "cover - brass step",
+            desc:  "cover step for brass.pl",
+                        constraints: "NA",
+                        author: "cgpit@sanger.ac.uk"
+       exec """export SINGULARITYENV_PCAP_THREADED_REM_LOGS=1
+              && $sing_brass
+              brass.pl -c $THREADS -o $OUTDIR -s $SPECIES -as $SPECIES_ASSEMBLY
+              -depth $IGNORE_DEPTH -filter $NORMAL_PANEL_GROUPS -genome $REFERENCE -g_cache $GENOME_CACHE
+              -tn $TUMOUR_NAME -nn $NORMAL_NAME -t $TUMOUR_BAM -n $NORMAL_BAM -protocol $SEQ_PROTOCOL
+              -viral $BRASS_VIRAL_DB -microbe $BRASS_MICROBE_DB_STUB -gcbins $BRASS_GC_BINS -centtel $BRASS_CENT_TEL -sampstat $ASCAT_SAMP_STATS
+              -p cover -cb $BRASS_CYTOBAND -limit $LSF_ARRAY_END_COVER -i \$LSB_JOBINDEX
+              && date >$output.track """, """lsf_COVER"""
+}
+
+brass_therest = {
+        doc title: "merge - brass step",
+            desc:  "merge step for brass.pl",
+                        constraints: "NA",
+                        author: "cgpit@sanger.ac.uk"
+       exec """export SINGULARITYENV_PCAP_THREADED_REM_LOGS=1
+              && $sing_brass
+              brass.pl -c $LSF_THREADS_THEREST -o $OUTDIR -s $SPECIES -as $SPECIES_ASSEMBLY
+              -depth $IGNORE_DEPTH -filter $NORMAL_PANEL_GROUPS -genome $REFERENCE -g_cache $GENOME_CACHE
+              -tn $TUMOUR_NAME -nn $NORMAL_NAME -t $TUMOUR_BAM -n $NORMAL_BAM -protocol $SEQ_PROTOCOL
+              -viral $BRASS_VIRAL_DB -microbe $BRASS_MICROBE_DB_STUB -gcbins $BRASS_GC_BINS -centtel $BRASS_CENT_TEL -sampstat $ASCAT_SAMP_STATS
+              -cb $BRASS_CYTOBAND
+              && $sing_brass brass.pl --version > brass.version
+              && date >$output.track """, """lsf_THEREST"""
+}

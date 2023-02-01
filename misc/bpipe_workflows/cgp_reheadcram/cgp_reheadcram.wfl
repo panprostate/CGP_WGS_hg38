@@ -1,0 +1,34 @@
+load 'cgp_reheadcram.prm'
+
+def sing_pcapcore = "singularity exec --cleanenv --no-home --workdir $OUTDIR --pwd $OUTDIR --home $OUTDIR --bind $SCRATCH_ROOT:$SCRATCH_ROOT $SIF_PCAP_CORE"
+
+reheadcram_newheader = {
+    doc title: "Create a new CRAM header file",
+        desc:  "This section creates the new CRAM header. Whole process reheads a CRAM file, storing the old RD values as a @CO and using the RG tags supplied in a file to create a new @RG line",
+        constraints: "N/A",
+        author: "cgpit@sanger.ac.uk"
+    produce("$OUTDIR/reheadcram_newheader.${SAMPLE_NAME}.success"){
+        exec """
+            $sing_pcapcore bash -c 'samtools view -H $OUTDIR/${SAMPLE_NAME}.download.${FILE_TYPE} > $OUTDIR/${SAMPLE_NAME}.header'
+            && generate_reheader_info.pl -f $OUTDIR/${SAMPLE_NAME}.header -i $OUTDIR/${SAMPLE_NAME}.id.out
+                -r $OUTDIR/${SAMPLE_NAME}.rg.out -l ${SAMPLE_NAME} -b ${LIBRARY} -p ${PREFIX_OLD_RG} -n ${NPG_RUN}
+                -a ${LANE_POS} -ds ${RG_DESCRIPTION} -s ${SAMPLE_SYNONYM} -y ${MACHINE_TYPE}
+            && reheadCram.pl -f $OUTDIR/${SAMPLE_NAME}.header -r $OUTDIR/${SAMPLE_NAME}.rg.out -o $OUTDIR/${SAMPLE_NAME}.newhead.sam
+            && touch $output
+        """, "lsf_reheadcram_newhead"
+    }
+}
+
+reheadcram_newheadtobam = {
+    doc title: "Create a new headed bam file",
+    desc:  "Creates a new headed bam file using generated header from reheadcram and existing bam file.",
+    constraints: "N/A",
+    author: "cgpit@sanger.ac.uk"
+    produce("$OUTDIR/reheadcram_newheadtobam.${SAMPLE_NAME}.success"){
+        exec """
+            $sing_pcapcore samtools reheader $OUTDIR/${SAMPLE_NAME}.head.sam $OUTDIR/${SAMPLE_NAME}.download.bam > $OUTDIR/${SAMPLE_NAME}.new.bam
+            && mv $OUTDIR/${SAMPLE_NAME}.new.bam $OUTDIR/${SAMPLE_NAME}.download.bam
+            && touch $output
+        """, "lsf_reheadcram_newheadtobam"
+    }
+}

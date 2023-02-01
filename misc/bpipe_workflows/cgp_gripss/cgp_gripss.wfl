@@ -1,0 +1,36 @@
+load 'cgp_gripss.prm'
+
+about title: "CASM GRIPSS implementation bpipe workflow"
+
+def sing_gripss = "singularity exec --cleanenv --no-home --workdir $OUTDIR --pwd $OUTDIR --home $OUTDIR --bind $SCRATCH_ROOT:$SCRATCH_ROOT $SIF_GRIPSS"
+// used in grep and -eq later, +1 to ensure greater than the cut-off
+def filter_limit = 5000001
+
+gripss_gripss = {
+  doc title: "GRIPSS, filtering for GRIDSS",
+      desc:  "all commands in one step, short runtime",
+      constraints: "N/A",
+      author: "cgpit@sanger.ac.uk"
+  exec """
+      rm -f $OUTDIR/tmp.filtered.vcf.gz;
+      rec=\$(zgrep -m $filter_limit -cv '^#' ${TUM_STAGE}/${FIELD_VAL}.gridss.vcf.gz );
+      if [[ $rec -eq $filter_limit ]]; then
+        echo "Pre-filtering GRIDSS data as >= $filter_limit records";
+        (zgrep -B 1000000 -m 1 '^#CHROM' ${TUM_STAGE}/${FIELD_VAL}.gridss.vcf.gz ;
+        zgrep -v '^#' ${TUM_STAGE}/${FIELD_VAL}.gridss.vcf.gz | awk '\$6 >= 150 { print \$0 }') | gzip -c > $OUTDIR/tmp.filtered.vcf.gz;
+      else
+        echo "NOT pre-filtering GRIDSS data as < than $filter_limit records";
+        ln -s ${TUM_STAGE}/${FIELD_VAL}.gridss.vcf.gz $OUTDIR/tmp.filtered.vcf.gz;
+      fi;
+      $sing_gripss java -Xms3500m -Xmx${LSF_MEMORY_GRIPSS}m -jar /opt/wtsi-cgp/java/gripss.jar
+        -sample $TUMOUR_NAME
+        -ref_genome ${REFERENCE}
+        -pon_sgl_file ${GRIDSS_BREAKEND_PON}
+        -pon_sv_file ${GRIDSS_BREAKPOINT_PON}
+        -known_hotspot_file ${GRIDSS_BREAKPOINT_HOTSPOT}
+        -vcf $OUTDIR/tmp.filtered.vcf.gz
+        -output_dir ${OUTDIR}
+      && version_from_sif.pl ${SIF_GRIPSS} > gripss.version
+      && date >$output.track
+  """, """lsf_GRIPSS"""
+}

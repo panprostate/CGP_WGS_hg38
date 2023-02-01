@@ -1,0 +1,8 @@
+load 'cgp_resultloader.wfl'
+load 'cgp_gridss.wfl'
+Bpipe.run{
+	gridss_preprocess+
+	gridss_assemble+
+	gridss_call+
+	canpipe_resultloader
+}

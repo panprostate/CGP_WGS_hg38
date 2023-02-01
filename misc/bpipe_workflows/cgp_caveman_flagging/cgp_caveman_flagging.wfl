@@ -1,0 +1,58 @@
+load 'cgp_caveman_flagging.prm'
+about title: "CGP caveman_flagging bpipe workflow"
+
+def sing_cavewrap = "export SINGULARITYENV_PCAP_THREADED_REM_LOGS=1 && singularity exec --cleanenv --no-home --workdir $OUTDIR --pwd $OUTDIR --home $OUTDIR --bind $SCRATCH_ROOT:$SCRATCH_ROOT $SIF_CGPCAVEMANWRAPPER"
+
+caveman_flagging_split ={
+  doc title: "caveman_flagging - flag_split",
+            desc:  "split step for cgpFlagCaVEMan.pl. Splits vcf file into chunks",
+            constraints: "N/A",
+            author: "cgpit@sanger.ac.uk"
+    exec """
+      mkdir -p $OUTDIR/progress
+      && $sing_cavewrap bgzip -c ${TUM_STAGE}/${FIELD_VAL}.germline.bed > $OUTDIR/${FIELD_VAL}.germline.bed.gz
+      && $sing_cavewrap tabix -p bed $OUTDIR/${FIELD_VAL}.germline.bed.gz
+      && vcfVerify.pl -i ${TUM_STAGE}/${FIELD_VAL}.caveman_c.vcf.gz -o $OUTDIR/input.caveman_c.vcf.gz
+      && $sing_cavewrap cgpVCFSplit.pl -i ${TUM_STAGE}/${FIELD_VAL}.caveman_c.vcf.gz -o $OUTDIR/split.vcf -s -l $SPLIT_LINE_COUNT
+      && date >$output.track
+    """, "lsf_cave_flag_split"
+}
+
+caveman_flagging_flag_split = {
+  doc title: "caveman_flagging - flag_split",
+            desc:  "flag step for cgpFlagCaVEMan.pl when caveman vcf file is split",
+            constraints: "N/A",
+            author: "cgpit@sanger.ac.uk"
+    exec """
+      if [ ! -e $OUTDIR/progress/flag.\$LSB_JOBINDEX ]; then
+          $sing_cavewrap cgpFlagCaVEMan.pl -i $OUTDIR/split.vcf.\$LSB_JOBINDEX -o $OUTDIR/flagged_split.vcf.\$LSB_JOBINDEX -ref ${OUTDIR}/${refBase}/core_ref/genome.fa.fai
+          -m $TUMOUR_BAM -n $NORMAL_BAM -s $SPECIES -b ${OUTDIR}/${refBase}/caveman_flagging_ref/flagging/ -p $ID_ANALYSIS_PROC
+          -c ${OUTDIR}/${refBase}/flag.vcf.config.* -v ${OUTDIR}/${refBase}/caveman_flagging_flag_config_ref.ini -t $SEQ_TYPE -umv ${OUTDIR}/${refBase}/caveman/
+          -ab ${OUTDIR}/${refBase}/vagrent_ref/ 
+          -g $OUTDIR/${FIELD_VAL}.germline.bed.gz
+          && touch $OUTDIR/progress/flag.\$LSB_JOBINDEX
+          && date >$output.track;
+      else
+        date >$output.track;
+      fi
+    """, "lsf_cave_flag_flag"
+}
+
+caveman_flagging_split_merge = {
+  doc title: "caveman_flagging - merge",
+            desc:  "Merge flagged files into one",
+            constraints: "N/A",
+            author: "cgpit@sanger.ac.uk"
+    exec """grep -e '^#' $OUTDIR/flagged_split.vcf.1 > $OUTDIR/flagged_split.merge.vcf
+      && count=`ls $OUTDIR/flagged_split.vcf.*| xargs cat | grep -vce '^#'`; if [ $count -gt 0 ]; then ls $OUTDIR/flagged_split.vcf.* | xargs cat | grep -ve '^#' >> $OUTDIR/flagged_split.merge.vcf; fi
+      && $sing_cavewrap bash -c '
+        vcf-sort $OUTDIR/flagged_split.merge.vcf > $OUTDIR/${TUMOUR_NAME}_vs_${NORMAL_NAME}.flagged.muts.vcf
+        && bgzip -c $OUTDIR/${TUMOUR_NAME}_vs_${NORMAL_NAME}.flagged.muts.vcf > $OUTDIR/${TUMOUR_NAME}_vs_${NORMAL_NAME}.flagged.muts.vcf.gz
+        && tabix -p vcf $OUTDIR/${TUMOUR_NAME}_vs_${NORMAL_NAME}.flagged.muts.vcf.gz
+        && cgpFlagCaVEMan.pl -version > cgpFlagCaVEMan.version
+      '
+      && vcfVerify.pl -i $OUTDIR/${TUMOUR_NAME}_vs_${NORMAL_NAME}.flagged.muts.vcf.gz -c $OUTDIR/input.caveman_c.vcf.gz.chk -d
+      && checksums.pl -c md5 -c sha256 -i $OUTDIR/${TUMOUR_NAME}_vs_${NORMAL_NAME}.flagged.muts.vcf.gz
+      && checksums.pl -c md5 -c sha256 -i $OUTDIR/${TUMOUR_NAME}_vs_${NORMAL_NAME}.flagged.muts.vcf.gz.tbi
+      && date >$output.track """, "lsf_cave_flag_merge"
+}

@@ -1,0 +1,8 @@
+load 'cgp_multibigwig.wfl'
+load 'cgp_resultloader.wfl'
+
+Bpipe.run{
+  bamToBwBases+
+  canpipe_resultloader
+}
+

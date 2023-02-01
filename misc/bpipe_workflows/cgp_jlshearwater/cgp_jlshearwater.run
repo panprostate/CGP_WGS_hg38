@@ -1,0 +1,8 @@
+load 'cgp_resultloader.wfl'
+load 'cgp_jlshearwater.wfl'
+Bpipe.run{
+	jlshearwater_split+
+	jlshearwater_count+
+	jlshearwater_gathercount+
+	canpipe_resultloader
+}

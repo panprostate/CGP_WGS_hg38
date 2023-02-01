@@ -1,0 +1,7 @@
+load 'cgp_sampleqc.wfl'
+load 'cgp_resultloader.wfl'
+
+Bpipe.run{
+  metanormqc+
+  canpipe_resultloader
+}

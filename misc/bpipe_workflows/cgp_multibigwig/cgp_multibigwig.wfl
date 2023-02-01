@@ -1,0 +1,17 @@
+load 'cgp_multibigwig.prm'
+about title: "CGP MultiBigWig bpipe workflow"
+
+def sing_mbw = "singularity exec --cleanenv --no-home --workdir $OUTDIR --pwd $OUTDIR --home $OUTDIR --bind $SCRATCH_ROOT:$SCRATCH_ROOT $SIF_CGPBIGWIG "
+
+bamToBwBases = {
+  doc title: "bamToBwbases",
+    desc:  "generate BW file for each base - bam2bwbases",
+    constraints: "N/A",
+    author: "cgpit@sanger.ac.uk"
+  exec """export SINGULARITYENV_PCAP_THREADED_REM_LOGS=1
+       && $sing_mbw bash -c '
+        bam2bwbases -o $OUTFILE -F $SAMFLAG -r ${OUTDIR}/${refBase}/core_ref/genome.fa -i $TUMOUR_BAM
+        && bam2bwbases -version > cgpbigwig.version
+      '
+       && date >$output.track""", "lsf_BAM_TO_BW_BASES"
+}

@@ -1,0 +1,6 @@
+load 'cgp_staging.prm'
+load 'cgp_staging.wfl'
+
+Bpipe.run{
+	staging_stage
+}

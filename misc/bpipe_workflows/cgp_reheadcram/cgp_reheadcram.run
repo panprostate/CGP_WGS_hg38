@@ -1,0 +1,4 @@
+load 'cgp_reheadcram.wfl'
+Bpipe.run {
+  reheadcram_newheader
+}

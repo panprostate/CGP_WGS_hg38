@@ -1,0 +1,11 @@
+OUTDIR=""
+SAMPLE_NAME=""
+TARGET_BED=""
+
+LSF_Q_coverage="normal"
+LSF_MEMORY_coverage="2000"
+LSF_ARRAY_START_coverage="1"
+LSF_ARRAY_END_coverage="1"
+
+LSF_JOB_NAME="bp_coverage"
+THREADS="1"

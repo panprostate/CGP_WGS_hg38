@@ -1,0 +1,19 @@
+load 'cgp_splot.prm'
+
+about title: "CGP splot (sequence and somatic mutation plots) implementation bpipe workflow"
+
+def sing_splot = "singularity exec --cleanenv --no-home --workdir $OUTDIR --pwd $OUTDIR --home $OUTDIR --bind $SCRATCH_ROOT:$SCRATCH_ROOT $SIF_SPLOT "
+
+splot_VcfToJson = {
+        doc title: "Splot - sequence and somatic mutation plots",
+                desc:  "Extract data from a vcf file and convert to a json string using vcfToJson.pl",
+                constraints: "expects *.vcf.gz as input",
+                author: "cgpit@sanger.ac.uk"
+        exec """
+             $sing_splot bash -c '
+                convert_vcfToJson.pl -i $OUTDIR/${TUMOUR_NAME}.vcf.gz -s $TUMOUR_NAME -o $OUTDIR/${TUMOUR_NAME}.json
+                && convert_vcfToJson.pl -version > splot.version
+             '
+             && date >$output.track
+        """, """lsf_SPLOT"""
+}

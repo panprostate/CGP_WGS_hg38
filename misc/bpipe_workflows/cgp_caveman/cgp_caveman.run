@@ -1,0 +1,13 @@
+load 'cgp_caveman.wfl'
+load 'cgp_resultloader.wfl'
+
+Bpipe.run{
+  caveman_setup+
+  caveman_split+
+  caveman_split_concat+
+  caveman_mstep+
+  caveman_merge+
+  caveman_estep+
+  caveman_merge_results+
+  canpipe_resultloader
+}

@@ -1,0 +1,6 @@
+load 'cgp_vaf.wfl'
+Bpipe.run{
+vaf_augment+
+vaf_copy_outfile
+}
+

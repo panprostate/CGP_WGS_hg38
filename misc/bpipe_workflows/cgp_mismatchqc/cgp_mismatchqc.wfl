@@ -1,0 +1,32 @@
+load 'cgp_mismatchqc.prm'
+about title: "CGP mismatchqc bpipe workflow. Input and output are a bam file"
+
+def sing_pcapcore = "singularity exec --cleanenv --no-home --workdir $OUTDIR --pwd $OUTDIR --home $OUTDIR --bind $SCRATCH_ROOT:$SCRATCH_ROOT $SIF_PCAP_CORE "
+
+mismatchqc = {
+    doc title: "run mismatchQc",
+        desc:  "find palindromic base mismatches from cruciform DNA structures",
+        constraints: "N/A",
+        author: "cgpit@sanger.ac.uk"
+    produce("$OUTDIR/mismatchqc.${SAMPLE_NAME}.success"){
+        exec """$sing_pcapcore bash -c '
+                mismatchQc -i $OUTDIR/${SAMPLE_NAME}.bam -p -t $MMQCFRAC -@ $LSF_THREADS_MISMATCHQC
+                | tee $OUTDIR/${SAMPLE_NAME}.tmp.bam
+                | samtools index - $OUTDIR/${SAMPLE_NAME}.tmp.bam.bai
+            '
+            && touch $output""", "lsf_MISMATCHQC"
+    }
+}
+
+mismatchqc_rename_bam = {
+    doc title: "rename file",
+        desc:  "rename bam/cram file",
+        constraints: "N/A",
+        author: "cgpit@sanger.ac.uk"
+    produce("$OUTDIR/rename_bam.${SAMPLE_NAME}.success"){
+        exec """
+            mv $OUTDIR/${SAMPLE_NAME}.tmp.bam $OUTDIR/${SAMPLE_NAME}.bam
+            && mv $OUTDIR/${SAMPLE_NAME}.tmp.bam.bai $OUTDIR/${SAMPLE_NAME}.bam.bai
+            && touch $output""", "lsf_RENAME_BAM"
+    }
+}

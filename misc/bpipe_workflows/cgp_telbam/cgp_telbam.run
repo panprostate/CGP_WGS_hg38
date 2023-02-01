@@ -1,0 +1,6 @@
+load 'cgp_resultloader.wfl'
+load 'cgp_telbam.wfl'
+Bpipe.run{
+	telomerecat_telbam+
+	canpipe_resultloader
+}

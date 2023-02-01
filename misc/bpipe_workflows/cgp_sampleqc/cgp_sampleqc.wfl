@@ -1,0 +1,24 @@
+load 'cgp_sampleqc.prm'
+about title: "CGP Sample QC (metanormQc) workflow"
+
+def sing_sampqc = "singularity exec --cleanenv --no-home --workdir $OUTDIR --pwd $OUTDIR --home $OUTDIR --bind $SCRATCH_ROOT:$SCRATCH_ROOT $SIF_METANORMQC "
+
+metanormqc = {
+  doc title: "metanormqc",
+    desc:  "Run metanormqc",
+    constraints: "N/A",
+    author: "cgpit@sanger.ac.uk"
+  exec """
+    $sing_sampqc bash -c '
+        coverageQC.pl  -indexRef ${REFERENCE}.fai 
+                -mapRef $MAPABILITY
+                -gcRef $GC_REF
+                -timing $TIMING
+                -maskRef $MASK_REF
+                -o $TUMOUR_NAME
+                $TUMOUR_BAM > $OUTFILE
+        && (echo "{" ; cat $OUTFILE ; echo "}" ) > ${OUTFILE}.json
+        && coverageQC.pl -version > coverageqc.version
+      '
+       && date >$output.track""", "lsf_METANORMQC"
+}

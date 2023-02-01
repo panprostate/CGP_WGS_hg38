@@ -1,0 +1,18 @@
+load 'cgp_external_map_bamstats.wfl'
+load 'cgp_reheadcram.wfl'
+load 'cgp_biobambam.wfl'
+load 'cgp_bwamem.wfl'
+load 'cgp_allele_count.wfl'
+load 'cgp_resultloader.wfl'
+
+Bpipe.run {
+  external_stage+
+  reheadcram_newheader+
+  biobambam_bamcollate2_rehead+
+  bwamem_setup_split+
+  bwamem_bwamem+
+  bwamem_mark+
+  bwamem_mv_bam+
+  allelecounter_genotyping+
+  canpipe_resultloader
+}

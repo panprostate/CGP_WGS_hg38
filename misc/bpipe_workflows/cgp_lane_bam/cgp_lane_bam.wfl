@@ -1,0 +1,19 @@
+load 'cgp_lane_bam.prm'
+
+def ref_path_mounts = System.getenv()['REF_PATH_MOUNTS']
+def sing_pcapcore = "singularity exec --cleanenv --no-home --workdir $OUTDIR --pwd $OUTDIR --home $OUTDIR --bind $SCRATCH_ROOT:$SCRATCH_ROOT $ref_path_mounts $SIF_PCAP_CORE"
+
+lane_bam_streamrg = {
+    doc title: "Create a new lane lel bam file",
+        desc:  "This section creates a new lane level bam file. It stream the lane from a lane or merged sample file by @RG",
+        constraints: "N/A",
+        author: "cgpit@sanger.ac.uk"
+    produce("$OUTDIR/lane_bam_streamrg.${SAMPLE_NAME}.success"){
+        exec """export SINGULARITYENV_REF_PATH=$REF_PATH
+            && $sing_pcapcore bash -c 'samtools view -H $INPUTDIR/${INPUTFILE}.${SUFFIX} > $OUTDIR/${SAMPLE_NAME}.header'
+            && generate_reheader_info.pl -f $OUTDIR/${SAMPLE_NAME}.header -lb $OUTDIR/${SAMPLE_NAME}.rgid.out -rg $RG_ID
+            && $sing_pcapcore bash -c 'samtools view -R $OUTDIR/${SAMPLE_NAME}.rgid.out -O bam $INPUTDIR/${INPUTFILE}.${SUFFIX} >$OUTDIR/${SAMPLE_NAME}.download.bam'
+            && touch $output
+        """, "lsf_streamrg"
+    }
+}

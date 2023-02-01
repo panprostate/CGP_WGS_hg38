@@ -1,0 +1,116 @@
+load 'cgp_bigwig.prm'
+about title: "CGP BigWig bpipe workflow"
+
+def sing_pcapcore = "export SINGULARITYENV_PCAP_THREADED_REM_LOGS=1 && singularity exec --cleanenv --no-home --workdir $OUTDIR --pwd $OUTDIR --home $OUTDIR --bind $SCRATCH_ROOT:$SCRATCH_ROOT $SIF_PCAP_CORE "
+
+bigwig_bamToBw = {
+        doc title: "bigwig - bamToBw",
+                        desc:  "generate BW file for each chromosome - bamToBw.pl",
+                        constraints: "N/A",
+                        author: "cgpit@sanger.ac.uk"
+        exec """$sing_pcapcore bamToBw.pl -o $OUT  -r ${OUTDIR}/${refBase}/core_ref/genome.fa -b $BAM -a -p bamToBw -t $LSF_THREADS_BAM_TO_BW && date >${output("${OUTFILE}_bamToBw.track")}""", "lsf_BAM_TO_BW"
+}
+
+bigwig_mergeBw = {
+        doc title: "bigwig - mergeBw",
+                        desc:  "merge per chr BW into single bedGraph - bamToBw.pl",
+                        constraints: "N/A",
+                        author: "cgpit@sanger.ac.uk"
+        exec """$sing_pcapcore bamToBw.pl -o $OUT  -t 1 -r ${OUTDIR}/${refBase}/core_ref/genome.fa -b $BAM -a -p mergeBw -i 1 && date >${output("${OUTFILE}_mergeBw.track")}""", "lsf_MERGE_BW"
+}
+
+bigwig_generateBw = {
+        doc title: "bigwig - generateBw",
+                        desc:  "convert bedGraph to BW - bamToBw.pl",
+                        constraints: "N/A",
+                        author: "cgpit@sanger.ac.uk"
+        exec """$sing_pcapcore bash -c '
+                        bamToBw.pl -o $OUT  -t 1 -r ${OUTDIR}/${refBase}/core_ref/genome.fa -b $BAM -a -p generateBw -i 1
+                        && bamToBw.pl -v > bamToBw.version
+                '
+                && date >${output("${OUTFILE}_generateBw.track")}""", "lsf_GEN_BW"
+}
+
+renameBw = {
+        doc title: "bigwig - generateBw",
+                        desc:  "convert bedGraph to BW - bamToBw.pl",
+                        constraints: "N/A",
+                        author: "cgpit@sanger.ac.uk"
+        exec """mv $OUT/${NAME}.bw $SAMPLE && date >${output("${OUTFILE}_renameBw.track")}""", "lsf_RENAME_BW"
+}
+
+// Tumour bigwig steps
+
+bigwig_bamToBw_TM = {
+        doc title: "bigwig - bamToBw",
+                        desc:  "generate BW file for each chromosome - bamToBw.pl",
+                        constraints: "N/A",
+                        author: "cgpit@sanger.ac.uk"
+        exec """$sing_pcapcore bamToBw.pl -o $OUT  -r ${OUTDIR}/${refBase}/core_ref/genome.fa -b $BAM -a -p bamToBw -t $LSF_THREADS_BAM_TO_BW && date >${output("${OUTFILE}_bamToBw_TM.track")}""", "lsf_BAM_TO_BW_TM"
+}
+
+bigwig_mergeBw_TM = {
+        doc title: "bigwig - mergeBw",
+                        desc:  "merge per chr BW into single bedGraph - bamToBw.pl",
+                        constraints: "N/A",
+                        author: "cgpit@sanger.ac.uk"
+        exec """$sing_pcapcore bamToBw.pl -o $OUT  -t 1 -r ${OUTDIR}/${refBase}/core_ref/genome.fa -b $BAM -a -p mergeBw -i 1 && date >${output("${OUTFILE}_mergeBw_TM.track")}""", "lsf_MERGE_BW_TM"
+}
+
+bigwig_generateBw_TM = {
+        doc title: "bigwig - generateBw",
+                        desc:  "convert bedGraph to BW - bamToBw.pl",
+                        constraints: "N/A",
+                        author: "cgpit@sanger.ac.uk"
+        exec """$sing_pcapcore bash -c '
+                        bamToBw.pl -o $OUT  -t 1 -r ${OUTDIR}/${refBase}/core_ref/genome.fa -b $BAM -a -p generateBw -i 1
+                        && bamToBw.pl -v > bamToBw.version
+                '
+                && date >${output("${OUTFILE}_generateBw_TM.track")}""", "lsf_GEN_BW_TM"
+}
+
+renameBw_TM = {
+        doc title: "bigwig - generateBw",
+                        desc:  "convert bedGraph to BW - bamToBw.pl",
+                        constraints: "N/A",
+                        author: "cgpit@sanger.ac.uk"
+        exec """mv $OUT/${NAME}.bw $SAMPLE && date >${output("${OUTFILE}_renameBw_TM.track")}""", "lsf_RENAME_BW_TM"
+}
+
+// Normal bigwig steps
+
+bigwig_bamToBw_NM = {
+        doc title: "bigwig - bamToBw",
+                        desc:  "generate BW file for each chromosome - bamToBw.pl",
+                        constraints: "N/A",
+                        author: "cgpit@sanger.ac.uk"
+        exec """$sing_pcapcore bamToBw.pl -o $OUT  -r ${OUTDIR}/${refBase}/core_ref/genome.fa -b $BAM -a -p bamToBw -t $LSF_THREADS_BAM_TO_BW && date >${output("${OUTFILE}_bamToBw_NM.track")}""", "lsf_BAM_TO_BW_NM"
+}
+
+bigwig_mergeBw_NM = {
+        doc title: "bigwig - mergeBw",
+                        desc:  "merge per chr BW into single bedGraph - bamToBw.pl",
+                        constraints: "N/A",
+                        author: "cgpit@sanger.ac.uk"
+        exec """$sing_pcapcore bamToBw.pl -o $OUT  -t 1 -r ${OUTDIR}/${refBase}/core_ref/genome.fa -b $BAM -a -p mergeBw -i 1 && date >${output("${OUTFILE}_mergeBw_NM.track")}""", "lsf_MERGE_BW_NM"
+}
+
+bigwig_generateBw_NM = {
+        doc title: "bigwig - generateBw",
+                        desc:  "convert bedGraph to BW - bamToBw.pl",
+                        constraints: "N/A",
+                        author: "cgpit@sanger.ac.uk"
+        exec """$sing_pcapcore bash -c '
+                        bamToBw.pl -o $OUT  -t 1 -r ${OUTDIR}/${refBase}/core_ref/genome.fa -b $BAM -a -p generateBw -i 1
+                        && bamToBw.pl -v > bamToBw.version
+                '
+                && date >${output("${OUTFILE}_generateBw_NM.track")}""", "lsf_GEN_BW_NM"
+}
+
+renameBw_NM = {
+        doc title: "bigwig - generateBw",
+                        desc:  "convert bedGraph to BW - bamToBw.pl",
+                        constraints: "N/A",
+                        author: "cgpit@sanger.ac.uk"
+        exec """mv $OUT/${NAME}.bw $SAMPLE && date >${output("${OUTFILE}_renameBw_NM.track")}""", "lsf_RENAME_BW_NM"
+}

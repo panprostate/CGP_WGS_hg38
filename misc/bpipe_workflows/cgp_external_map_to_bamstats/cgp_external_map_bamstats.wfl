@@ -1,0 +1,11 @@
+load 'cgp_external_map_bamstats.prm'
+
+about title: "CGP external import to bamstats bpipe workflow"
+
+external_stage = {
+	doc title: "external - stage",
+			desc:  "Stages input file to a file name which conforms to the input name expected by reheadcram_generateinputfiles",
+			constraints: "N/A",
+			author: "cgpit@sanger.ac.uk"
+	exec """stageFiles.pl -i $INPUTFILE -o $OUTDIR/${SAMPLE_NAME}.download.${FILE_TYPE} && date >$output.track """, """lsf_STAGE"""
+}

@@ -1,0 +1,7 @@
+load 'cgp_allele_count.wfl'
+load 'cgp_resultloader.wfl'
+
+Bpipe.run{
+  allelecounter_genotyping_stage+
+  canpipe_resultloader
+}

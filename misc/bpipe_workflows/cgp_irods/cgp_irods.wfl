@@ -1,0 +1,19 @@
+load 'cgp_irods.prm'
+
+irods_iget = {
+  doc title: "get CRAM/BAM file from iRODS",
+	               desc:  "use iget to retrieve CRAM/BAM from iRODS",
+	               constraints: "N/A",
+	               author: "cgpit@sanger.ac.uk"
+  produce("$OUTDIR/irods_iget.${SAMPLE_NAME}.${SUFFIX}.success") {
+	  exec """
+	        set -e;
+          set -o pipefail;
+	        rm -f $OUTDIR/${SAMPLE_NAME}.download.${SUFFIX} &&
+	        iget $INPUTFILE $OUTDIR/${SAMPLE_NAME}.download.${SUFFIX} &&
+	        imeta ls -ld $INPUTFILE md5 | grep -e 'value:' | awk '{print \$2" *$OUTDIR/${SAMPLE_NAME}.download.${SUFFIX}"}' | md5sum -c - &&
+	        touch $output""", "lsf_IRODS"
+  }
+}
+
+

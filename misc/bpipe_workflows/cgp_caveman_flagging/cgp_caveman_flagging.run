@@ -1,0 +1,9 @@
+load 'cgp_caveman_flagging.wfl'
+load 'cgp_resultloader.wfl'
+
+Bpipe.run{
+  caveman_flagging_split+
+  caveman_flagging_flag_split+
+  caveman_flagging_split_merge+
+  canpipe_resultloader
+}

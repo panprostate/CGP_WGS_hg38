@@ -1,0 +1,32 @@
+load 'cgp_vaf.wfl'
+load 'cgp_resultloader.wfl'
+load 'cgp_pindel.wfl'
+load 'cgp_bigwig.wfl'
+
+def prm = new ConfigSlurper().parse(new File('cgp_bigwig.prm').toURL())
+prm = prm.toProperties()
+
+TM_OUTDIR=prm.OUTDIR+'/'+prm.TUMOUR_NAME
+NM_OUTDIR=prm.OUTDIR+'/'+prm.NORMAL_NAME
+TM_BAM=prm.OUTDIR+'/'+prm.TUMOUR_NAME+'_vs_'+prm.NORMAL_NAME+'_mt.bam'
+NM_BAM=prm.OUTDIR+'/'+prm.TUMOUR_NAME+'_vs_'+prm.NORMAL_NAME+'_wt.bam'
+TM_SAMPLE_BW=prm.OUTDIR+'/'+prm.TUMOUR_NAME+'_vs_'+prm.NORMAL_NAME+'_mt.bw'
+NM_SAMPLE_BW=prm.OUTDIR+'/'+prm.TUMOUR_NAME+'_vs_'+prm.NORMAL_NAME+'_wt.bw'
+OUT_TM=prm.OUTDIR+'/'+prm.TUMOUR_NAME+'/bigwig_tm'
+OUT_NM=prm.OUTDIR+'/'+prm.NORMAL_NAME+'/bigwig_nm'
+
+Bpipe.run{
+    pindel_pindel+
+  [ [ bigwig_bamToBw_TM.using(OUT:"$TM_OUTDIR", BAM:"$TM_BAM",OUTFILE:"$OUT_TM")+
+  bigwig_generateBw_TM.using(OUT:"$TM_OUTDIR", BAM:"$TM_BAM",OUTFILE:"$OUT_TM")+
+  renameBw_TM.using(NAME:prm.TUMOUR_NAME,OUT:"$TM_OUTDIR",SAMPLE:"$TM_SAMPLE_BW",OUTFILE:"$OUT_TM")
+   ],
+   [ bigwig_bamToBw_NM.using(OUT:"$NM_OUTDIR", BAM:"$NM_BAM",OUTFILE:"$OUT_NM")+
+  bigwig_generateBw_NM.using(OUT:"$NM_OUTDIR", BAM:"$NM_BAM",OUTFILE:"$OUT_NM")+
+  renameBw_NM.using(NAME:prm.NORMAL_NAME,OUT:"$NM_OUTDIR",SAMPLE:"$NM_SAMPLE_BW",OUTFILE:"$OUT_NM")
+   ],
+   [ vaf_augment+vaf_copy_outfile] ]+
+   pindel_preupload+
+    canpipe_resultloader
+}
+

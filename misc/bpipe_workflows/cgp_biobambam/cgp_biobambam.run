@@ -1,0 +1,9 @@
+load 'cgp_biobambam.wfl'
+
+Bpipe.run{
+	biobambam_scramble+
+	biobambam_bamsort+
+	biobambam_bamcollate2_rehead+
+	biobambam_index
+}
+

@@ -1,0 +1,37 @@
+load 'cgp_pindel.prm'
+
+about title: "CGP pindel bpipe workflow"
+
+def sing_pindel = "singularity exec --cleanenv --no-home --workdir $OUTDIR --pwd $OUTDIR --home $OUTDIR --bind $SCRATCH_ROOT:$SCRATCH_ROOT $SIF_CGPPINDEL "
+// expand any params that have embedded variables
+GENES = "$GENES"
+
+// ${OUTDIR}/${refBase}/pindel/unmatched_normals.*.gz is intentional to allow support for FF021 if required in future
+// only the relevant bed/gff3 should be in the ref set
+
+pindel_pindel = {
+  doc title: "pindel - pindel",
+      desc:  "singularity complete pindel.pl exec",
+      constraints: "N/A",
+      author: "cgpit@sanger.ac.uk"
+  exec """ export SINGULARITYENV_PCAP_THREADED_REM_LOGS=1
+      && $sing_pindel bash -c '
+        pindel.pl -o $OUTDIR -t $TUMOUR_BAM -n $NORMAL_BAM
+        -r ${OUTDIR}/${refBase}/core_ref/genome.fa -s ${OUTDIR}/${refBase}/pindel/simpleRepeats.bed.gz -u ${OUTDIR}/${refBase}/pindel_np.*.gz
+        -b ${OUTDIR}/${refBase}/pindel/high-depth.bed.gz -f ${OUTDIR}/${refBase}/pindel/Rules.lst -sf ${OUTDIR}/${refBase}/pindel/softRules.lst -g ${OUTDIR}/${refBase}/vagrent_ref/codingexon_regions.indel.bed.gz
+        -sp $SPECIES -as $SPECIES_ASSEMBLY
+        -st $SEQ_TYPE -cpus $LSF_THREADS_PINDEL -exclude ${OUTDIR}/${refBase}/pindel/ignore_contigs_pindel.txt -a $ID_ANALYSIS_PROC
+        && pindel.pl -version > cgpPindel.version
+      '
+      && vcfVerify.pl -i ${TUMOUR_NAME}_vs_${NORMAL_NAME}.flagged.vcf.gz
+      && date >$output.track """, """lsf_PINDEL"""
+}
+
+pindel_preupload = {
+  doc title: "pindel - preupload",
+      desc:  "pindel.pl, check vcf is valid before upload trigger",
+      constraints: "N/A",
+      author: "cgpit@sanger.ac.uk"
+  exec """ vcfVerify.pl -i ${TUMOUR_NAME}_vs_${NORMAL_NAME}.flagged.vcf.gz -c ${TUMOUR_NAME}_vs_${NORMAL_NAME}.flagged.vcf.gz.chk -d
+      && date >$output.track """, """lsf_PINDEL_PREUPLOAD"""
+}

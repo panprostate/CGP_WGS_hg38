@@ -1,0 +1,26 @@
+load 'cgp_vagrent.prm'
+
+about title: "CGP VAGrENT implementation bpipe workflow"
+
+def sing_vagrent = "singularity exec --cleanenv --no-home --workdir $OUTDIR --pwd $OUTDIR --home $OUTDIR --bind $SCRATCH_ROOT:$SCRATCH_ROOT $SIF_VAGRENT "
+// expand any params that have embedded variables
+GENOME_CACHE = "$GENOME_CACHE"
+
+vagrent_AnnotateVcf = {
+        doc title: "VAGrENT - vcf annotation",
+                        desc:  "Annotate vcf file using AnnotateVcf.pl",
+                        constraints: "expects *.bgz as input",
+                        author: "cgpit@sanger.ac.uk"
+        def result_file = "$OUTDIR/${TUMOUR_NAME}.vcf.gz"
+        exec """
+             vcfVerify.pl -i $TUM_STAGE/${TUMOUR_ID}.caveman_c.flag.vcf.gz -o $OUTDIR/input.caveman_c.flag.vcf.gz
+             && $sing_vagrent bash -c '
+                AnnotateVcf.pl -i $TUM_STAGE/${TUMOUR_ID}.caveman_c.flag.vcf.gz -o $OUTDIR/${TUMOUR_NAME}.vcf --cache $GENOME_CACHE -t
+                && AnnotateVcf.pl -version > AnnotateVcf.version
+             '
+             && vcfVerify.pl -i ${result_file} -c $OUTDIR/input.caveman_c.flag.vcf.gz.chk -d
+             && checksums.pl -c md5 -c sha256 -i ${result_file}
+             && checksums.pl -c md5 -c sha256 -i ${result_file}.tbi
+             && date >$output.track
+        """, """lsf_VAGRENT"""
+}

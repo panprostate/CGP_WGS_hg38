@@ -1,0 +1,42 @@
+load 'cgp_vaf.prm'
+about title: "CGP vaf implementation bpipe workflow"
+
+def sing_vaf = "singularity exec --cleanenv --no-home --workdir $OUTDIR --pwd $OUTDIR --home $OUTDIR --bind $SCRATCH_ROOT:$SCRATCH_ROOT $SIF_VAFCORRECT "
+
+vaf_augment = {
+  doc title: "vaf - variant allele fraction calculation",
+      desc:  "Augment vcf file using cgpVaf.pl",
+      constraints: "expects *.bgz as input",
+      author: "cgpit@sanger.ac.uk"
+  def result_file = "$OUTDIR/output/${TUMOUR_NAME}_vs_${NORMAL_NAME}${INPUT_EXT}"
+  exec """
+      vcfVerify.pl -i $OUTDIR/${TUMOUR_NAME}_vs_${NORMAL_NAME}${INPUT_EXT}
+      && $sing_vaf cgpVaf.pl -m
+      -r $PASSED_ONLY
+      -hdr $HIGH_DEPTH_REGIONS
+      -vcf $OUTDIR/${TUMOUR_NAME}_vs_${NORMAL_NAME}${INPUT_EXT}
+      -oe $OUT_EXT
+      -d $OUTDIR
+      -o $OUTDIR/output
+      -a $VAR_TYPE
+      -g $REFERENCE
+      -pid $ID_INT_PROJECT
+      -tn $TUMOUR_NAME
+      -nn $NORMAL_NAME
+      -tb $TUMOUR_BAM
+      -nb $NORMAL_BAM
+      -emb $LSF_MEMORY_VAF
+      && vcfVerify.pl -i ${result_file} -c $OUTDIR/${TUMOUR_NAME}_vs_${NORMAL_NAME}${INPUT_EXT}.chk -d
+      && checksums.pl -c md5 -c sha256 -i ${result_file}
+      && checksums.pl -c md5 -c sha256 -i ${result_file}.tbi
+      && date >$output.track
+      """, """lsf_VAF"""
+}
+
+vaf_copy_outfile = {
+  doc title: "copy vaf file to output folder",
+      desc:  "copy vaf output to one level up to uploaded with pindel results",
+      constraints: "NA",
+      author: "cgpit@sanger.ac.uk"
+      exec """ ln -f $OUTDIR/output/${TUMOUR_NAME}_vs_${NORMAL_NAME}$INPUT_EXT* $OUTDIR/ && date >$output.track""", """lsf_RENAME_VCF"""
+}

@@ -1,0 +1,14 @@
+load 'cgp_baitappend.prm'
+about title: "append baitset id to coverage string"
+
+baitappend = {
+	doc title: "Append Baitset id",
+	    desc:  "Appends the baitset id the the end of the coverage string in the *.cvg file, prior to result loading",
+			constraints: "must have a <SAMPLE_NAME>.cvg file with content",
+			author: "cgpit@sanger.ac.uk"
+	produce("$OUTDIR/baitappend.${SAMPLE_NAME}.success"){
+	  exec """append_bait2cov.pl -db $DB_TYPE -p $ID_INT_PROJECT -f $OUTDIR/${SAMPLE_NAME}.cvg &&
+	          touch $output
+	      """, "lsf_BAITAPPEND"
+	}
+}

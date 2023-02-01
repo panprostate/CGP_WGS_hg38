@@ -1,0 +1,7 @@
+load 'cgp_splot.wfl'
+
+
+Bpipe.run{
+	splot_VcfToJson
+}
+

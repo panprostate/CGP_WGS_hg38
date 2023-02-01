@@ -1,0 +1,18 @@
+load 'cgp_bamstats.prm'
+about title: "CGP bam_stats reference implementation bpipe config"
+
+def sing_pcapcore = "singularity exec --cleanenv --no-home --workdir $OUTDIR --pwd $OUTDIR --home $OUTDIR --bind $SCRATCH_ROOT:$SCRATCH_ROOT $SIF_PCAP_CORE "
+
+bamstats_stats = {
+    doc title: "stats - bamstats_stats - bam stats",
+        desc:  "Bam stats generation step",
+        constraints: "Requires duplicate marked mapped bam file from bwamem & mark steps",
+        author: "cgpit@sanger.ac.uk"
+    produce("$OUTDIR/bamstats_stats.${SAMPLE_NAME}.success"){
+        exec """$sing_pcapcore bash -c '
+                bam_stats -@ ${LSF_THREADS_BAMSTATS} -r ${REFERENCE}.fai -i $OUTDIR/${SAMPLE_NAME}.bam -o $OUTDIR/${SAMPLE_NAME}.bam.bas
+                && bam_stats -v > pcapcore-bamstats.version
+            '
+            && touch $output""", "lsf_BAMSTATS"
+    }
+}

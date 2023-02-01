@@ -1,0 +1,279 @@
+load 'cgp_battenberg.prm'
+
+about title: "CGP Battenberg bpipe workflow"
+
+def sing_bb = "export SINGULARITYENV_PCAP_THREADED_REM_LOGS=1 && singularity exec --cleanenv --no-home --workdir $OUTDIR --pwd $OUTDIR --home $OUTDIR --bind $SCRATCH_ROOT:$SCRATCH_ROOT $SIF_CGPBATTENBERG "
+
+battenberg_splitlocifiles = {
+	doc title: "battenberg - split 1000genome loci files",
+			desc:  "split loci files step for battenberg.pl",
+			constraints: "N/A",
+			author: "cgpit@sanger.ac.uk"
+  if("$USER_DEC" != "accept" && "$USER_DEC" != "rerun"){
+    produce("$OUTDIR/battenberg_splitlocifiles.track") {
+      exec """
+        $sing_bb
+        battenberg.pl -gl $GENDER_LOCI -o $OUTDIR -r ${REFERENCE}.fai -tb $TUMOUR_BAM -nb $NORMAL_BAM
+        -gender $GENDER -impute-info $IMPUTE_INFO -u $THOUSAND_GENOME_LOCI_DIR -c $PROB_LOCI
+        -pr $SEQ_PROTOCOL -ig $IGNORE_CONTIG_FILE -t $LSF_THREADS_SPLITLOCIFILES
+        --num_loci_files $NUM_LOCI_FILES -p splitlocifiles
+        && date > $OUTDIR/$output
+      """, """lsf_SPLITLOCIFILES"""
+    }
+  } else {
+    produce("$OUTDIR/battenberg_splitlocifiles.track") {
+      // we clean the files that would block reanalysis here
+      exec """
+        perl -e 'if (-e "$OUTDIR/tmpBattenberg/progress/Sanger_CGP_Battenberg_Implement_battenberg_fitcopyno.0") {unlink ("$OUTDIR/tmpBattenberg/progress/Sanger_CGP_Battenberg_Implement_battenberg_fitcopyno.0", "$OUTDIR/tmpBattenberg/progress/Sanger_CGP_Battenberg_Implement_battenberg_callsubclones.0"); unlink (glob("$OUTDIR/tmpBattenberg/progress/Sanger_CGP_Battenberg_Implement_battenberg_finalise*.0"))}'
+        && echo "Accepted or rerun of battenberg result, no work to do." && date > $OUTDIR/$output
+      """, """lsf_TOUCH"""
+    }
+  }
+}
+
+battenberg_allelecount = {
+	doc title: "battenberg - allelecount",
+			desc:  "allelecount step for battenberg.pl",
+			constraints: "N/A",
+			author: "cgpit@sanger.ac.uk"
+  if("$USER_DEC" != "accept" && "$USER_DEC" != "rerun"){
+    produce("$OUTDIR/battenberg_allelecount.track") {
+      exec """
+        $sing_bb
+        battenberg.pl -gl $GENDER_LOCI -o $OUTDIR -r ${REFERENCE}.fai -tb $TUMOUR_BAM -nb $NORMAL_BAM
+        -gender $GENDER -impute-info $IMPUTE_INFO -u $THOUSAND_GENOME_LOCI_DIR -c $PROB_LOCI
+        -pr $SEQ_PROTOCOL -ig $IGNORE_CONTIG_FILE -t $LSF_THREADS_ALLELECOUNT
+        --num_loci_files $NUM_LOCI_FILES -p allelecount -i \$LSB_JOBINDEX -x \$LSB_JOBINDEX_END
+        && date > $OUTDIR/$output
+      """, """lsf_ALLELECOUNT"""
+    }
+  } else {
+    produce("$OUTDIR/battenberg_allelecount.track") {
+      exec """
+        echo "Accepted or rerun of battenberg result, no work to do." && date > $OUTDIR/$output
+      """, """lsf_TOUCH"""
+    }
+  }
+}
+
+battenberg_concatallelecount_baflog_gccorr = {
+	doc title: "battenberg - concat allelecount files together",
+			desc:  "concatenated allelecount files step for battenberg.pl",
+			constraints: "N/A",
+			author: "cgpit@sanger.ac.uk"
+  if("$USER_DEC" != "accept" && "$USER_DEC" != "rerun"){
+    produce("$OUTDIR/battenberg_concatallelecount_baflog_gccorr.track") {
+      exec """
+        $sing_bb bash -c "
+          battenberg.pl -gl $GENDER_LOCI -o $OUTDIR -r ${REFERENCE}.fai -tb $TUMOUR_BAM -nb $NORMAL_BAM
+          -gender $GENDER -impute-info $IMPUTE_INFO -u $THOUSAND_GENOME_LOCI_DIR -c $PROB_LOCI
+          -pr $SEQ_PROTOCOL -ig $IGNORE_CONTIG_FILE -t $LSF_THREADS_CONCATALLELECOUNT_BAFLOG_GCCORR
+          --num_loci_files $NUM_LOCI_FILES -p concatallelecount
+          && battenberg.pl -gl $GENDER_LOCI -o $OUTDIR -r ${REFERENCE}.fai -tb $TUMOUR_BAM -nb $NORMAL_BAM
+          -gender $GENDER -impute-info $IMPUTE_INFO -u $THOUSAND_GENOME_LOCI_DIR -c $PROB_LOCI
+          -pr $SEQ_PROTOCOL -ig $IGNORE_CONTIG_FILE -t $LSF_THREADS_CONCATALLELECOUNT_BAFLOG_GCCORR -se $SEED -p baflog
+          && battenberg.pl -gl $GENDER_LOCI -o $OUTDIR -r ${REFERENCE}.fai -tb $TUMOUR_BAM -nb $NORMAL_BAM
+          -gender $GENDER -impute-info $IMPUTE_INFO -u $THOUSAND_GENOME_LOCI_DIR -c $PROB_LOCI
+          -pr $SEQ_PROTOCOL -ig $IGNORE_CONTIG_FILE -t $LSF_THREADS_CONCATALLELECOUNT_BAFLOG_GCCORR -se $SEED
+          -gc $GC_CORRECTION_DIR -p gccorrect
+        "
+        && date > $OUTDIR/$output
+      """, """lsf_CONCATALLELECOUNT_BAFLOG_GCCORR"""
+    }
+  } else {
+    produce("$OUTDIR/battenberg_concatallelecount_baflog_gccorr.track") {
+      exec """
+        echo "Accepted or rerun of battenberg result, no work to do." && date > $OUTDIR/$output
+      """, """lsf_TOUCH"""
+    }
+  }
+}
+
+battenberg_imputefromaf_impute_combine = {
+	doc title: "battenberg - imputefromaf",
+			desc:  "imputefromaf step for battenberg.pl",
+			constraints: "N/A",
+			author: "cgpit@sanger.ac.uk"
+  if("$USER_DEC" != "accept" && "$USER_DEC" != "rerun"){
+    produce("$OUTDIR/battenberg_imputefromaf_impute_combine.track") {
+      exec """
+        $sing_bb bash -c "
+          battenberg.pl -gl $GENDER_LOCI -o $OUTDIR -r ${REFERENCE}.fai -tb $TUMOUR_BAM -nb $NORMAL_BAM
+          -gender $GENDER -impute-info $IMPUTE_INFO -u $THOUSAND_GENOME_LOCI_DIR -c $PROB_LOCI
+          -pr $SEQ_PROTOCOL -ig $IGNORE_CONTIG_FILE -t $LSF_THREADS_IMPUTEFROMAF_IMPUTE_COMBINE -se $SEED
+          -p imputefromaf -i \$LSB_JOBINDEX
+          && battenberg.pl -gl $GENDER_LOCI -o $OUTDIR -r ${REFERENCE}.fai -tb $TUMOUR_BAM -nb $NORMAL_BAM
+          -gender $GENDER -impute-info $IMPUTE_INFO -u $THOUSAND_GENOME_LOCI_DIR -c $PROB_LOCI
+          -pr $SEQ_PROTOCOL -ig $IGNORE_CONTIG_FILE -t $LSF_THREADS_IMPUTEFROMAF_IMPUTE_COMBINE -se $SEED
+          -p impute -i \$LSB_JOBINDEX
+          && battenberg.pl -gl $GENDER_LOCI -o $OUTDIR -r ${REFERENCE}.fai -tb $TUMOUR_BAM -nb $NORMAL_BAM
+          -gender $GENDER -impute-info $IMPUTE_INFO -u $THOUSAND_GENOME_LOCI_DIR -c $PROB_LOCI
+          -pr $SEQ_PROTOCOL -ig $IGNORE_CONTIG_FILE -t $LSF_THREADS_IMPUTEFROMAF_IMPUTE_COMBINE -se $SEED
+          -p combineimpute -i \$LSB_JOBINDEX
+        "
+        && date > $OUTDIR/$output
+      """, """lsf_IMPUTEFROMAF_IMPUTE_COMBINE"""
+    }
+  } else {
+    produce("$OUTDIR/battenberg_imputefromaf_impute_combine.track") {
+      exec """
+        echo "Accepted or rerun of battenberg result, no work to do." && date > $OUTDIR/$output
+      """, """lsf_TOUCH"""
+    }
+  }
+}
+
+battenberg_haplotypebafs_postbafclean_plothap = {
+	doc title: "battenberg - haplotypebafs",
+			desc:  "haplotypebafs step for battenberg.pl",
+			constraints: "N/A",
+			author: "cgpit@sanger.ac.uk"
+  if("$USER_DEC" != "accept" && "$USER_DEC" != "rerun"){
+    produce("$OUTDIR/battenberg_haplotypebafs_postbafclean_plothap.track") {
+      exec """
+        $sing_bb bash -c "
+          battenberg.pl -gl $GENDER_LOCI -o $OUTDIR -r ${REFERENCE}.fai -tb $TUMOUR_BAM -nb $NORMAL_BAM
+          -gender $GENDER -impute-info $IMPUTE_INFO -u $THOUSAND_GENOME_LOCI_DIR -c $PROB_LOCI
+          -pr $SEQ_PROTOCOL -ig $IGNORE_CONTIG_FILE -t $LSF_THREADS_HAPLOTYPEBAF_POSTBAFCLEAN_PLOTHAP -se $SEED
+          -p haplotypebafs -i \$LSB_JOBINDEX
+          && battenberg.pl -gl $GENDER_LOCI -o $OUTDIR -r ${REFERENCE}.fai -tb $TUMOUR_BAM -nb $NORMAL_BAM
+          -gender $GENDER -impute-info $IMPUTE_INFO -u $THOUSAND_GENOME_LOCI_DIR -c $PROB_LOCI
+          -pr $SEQ_PROTOCOL -ig $IGNORE_CONTIG_FILE -t $LSF_THREADS_HAPLOTYPEBAF_POSTBAFCLEAN_PLOTHAP -se $SEED
+          -p cleanuppostbaf -i \$LSB_JOBINDEX
+          && battenberg.pl -gl $GENDER_LOCI -o $OUTDIR -r ${REFERENCE}.fai -tb $TUMOUR_BAM -nb $NORMAL_BAM
+          -gender $GENDER -impute-info $IMPUTE_INFO -u $THOUSAND_GENOME_LOCI_DIR -c $PROB_LOCI
+          -pr $SEQ_PROTOCOL -ig $IGNORE_CONTIG_FILE -t $LSF_THREADS_HAPLOTYPEBAF_POSTBAFCLEAN_PLOTHAP -se $SEED
+          -p plothaplotypes -i \$LSB_JOBINDEX
+        "
+        && date > $OUTDIR/$output
+      """, """lsf_HAPLOTYPEBAF_POSTBAFCLEAN_PLOTHAP"""
+    }
+  } else {
+    produce("$OUTDIR/battenberg_haplotypebafs_postbafclean_plothap.track") {
+      exec """
+        echo "Accepted or rerun of battenberg result, no work to do." && date > $OUTDIR/$output
+      """, """lsf_TOUCH"""
+    }
+  }
+}
+
+battenberg_combinebafs_segphased = {
+	doc title: "battenberg - combinebafs",
+			desc:  "combinebafs step for battenberg.pl",
+			constraints: "N/A",
+			author: "cgpit@sanger.ac.uk"
+  if("$USER_DEC" != "accept" && "$USER_DEC" != "rerun"){
+    produce("$OUTDIR/battenberg_combinebafs_segphased.track") {
+      exec """
+        $sing_bb bash -c "
+          battenberg.pl -gl $GENDER_LOCI -o $OUTDIR -r ${REFERENCE}.fai -tb $TUMOUR_BAM -nb $NORMAL_BAM
+          -gender $GENDER -impute-info $IMPUTE_INFO -u $THOUSAND_GENOME_LOCI_DIR -c $PROB_LOCI
+          -pr $SEQ_PROTOCOL -ig $IGNORE_CONTIG_FILE -t $LSF_THREADS_COMBINEBAFS_SEGPHASED -se $SEED
+          -p combinebafs
+          && battenberg.pl -gl $GENDER_LOCI -o $OUTDIR -r ${REFERENCE}.fai -tb $TUMOUR_BAM -nb $NORMAL_BAM
+          -gender $GENDER -impute-info $IMPUTE_INFO -u $THOUSAND_GENOME_LOCI_DIR -c $PROB_LOCI
+          -pr $SEQ_PROTOCOL -ig $IGNORE_CONTIG_FILE -t $LSF_THREADS_COMBINEBAFS_SEGPHASED -se $SEED
+          -p segmentphased
+        "
+        && date > $OUTDIR/$output
+      """, """lsf_COMBINEBAFS_SEGPHASED"""
+    }
+  } else {
+    produce("$OUTDIR/battenberg_combinebafs_segphased.track") {
+      exec """
+        echo "Accepted or rerun of battenberg result, no work to do." && date > $OUTDIR/$output
+      """, """lsf_TOUCH"""
+    }
+  }
+}
+
+battenberg_fitcn_subclones = {
+	doc title: "battenberg - fitcn",
+			desc:  "fitcn step for battenberg.pl",
+			constraints: "N/A",
+			author: "cgpit@sanger.ac.uk"
+  if("$USER_DEC" != "accept"){ //Requires rerun or run
+    def cmd_extra = ""
+    if ("$NEW_CHR" != "") {
+      cmd_extra = """ -ch $NEW_CHR -po $NEW_POS -ic $NEW_MIN_CN -ac $NEW_MAJ_CN """
+    } else if ("$PURITY" != "") {
+      cmd_extra = """ -purity $PURITY -ploidy $PLOIDY """
+    }
+    produce("$OUTDIR/battenberg_fitcn_subclones.track") {
+      // progress files are cleaned in splitloci_files
+      exec """
+        $sing_bb bash -c "
+          battenberg.pl -gl $GENDER_LOCI -o $OUTDIR -r ${REFERENCE}.fai -tb $TUMOUR_BAM -nb $NORMAL_BAM
+          -gender $GENDER -impute-info $IMPUTE_INFO -u $THOUSAND_GENOME_LOCI_DIR -c $PROB_LOCI
+          -pr $SEQ_PROTOCOL -ig $IGNORE_CONTIG_FILE -t $LSF_THREADS_FITCN_SUBCLONES -p fitcn $cmd_extra
+          && battenberg.pl -gl $GENDER_LOCI -o $OUTDIR -r ${REFERENCE}.fai -tb $TUMOUR_BAM -nb $NORMAL_BAM
+          -gender $GENDER -impute-info $IMPUTE_INFO -u $THOUSAND_GENOME_LOCI_DIR -c $PROB_LOCI
+          -pr $SEQ_PROTOCOL -ig $IGNORE_CONTIG_FILE -t $LSF_THREADS_FITCN_SUBCLONES -se $SEED -p subclones
+        "
+        && date > $OUTDIR/$output
+      """, "lsf_FITCN_SUBCLONES"
+    }
+  } else {
+    produce("$OUTDIR/battenberg_fitcn_subclones.track") {
+      exec """
+        echo "Accepted battenberg result, no work to do." && date > $OUTDIR/$output
+      """, """lsf_TOUCH"""
+    }
+  }
+}
+
+battenberg_finalise = {
+	doc title: "battenberg - finalise",
+			desc:  "finalise step for battenberg.pl",
+			constraints: "N/A",
+			author: "cgpit@sanger.ac.uk"
+  if("$USER_DEC" == "accept"){
+    produce("$OUTDIR/battenberg_finalise.track") {
+      exec """
+        $sing_bb
+        battenberg.pl -gl $GENDER_LOCI -o $OUTDIR -r ${REFERENCE}.fai -tb $TUMOUR_BAM -nb $NORMAL_BAM
+        -gender $GENDER -impute-info $IMPUTE_INFO -u $THOUSAND_GENOME_LOCI_DIR -c $PROB_LOCI
+        -pr $SEQ_PROTOCOL -ra $SPECIES_ASSEMBLY -rs $SPECIES -pl $SEQ_PLATFORM -ig $IGNORE_CONTIG_FILE
+        -t $LSF_THREADS_FINALISE -p finalise
+        && date > $OUTDIR/$output
+      """, """lsf_FINALISE"""
+    }
+  }else{
+    produce("$OUTDIR/battenberg_finalise.track") {
+      exec """
+        $sing_bb
+        battenberg.pl -gl $GENDER_LOCI -o $OUTDIR -r ${REFERENCE}.fai -tb $TUMOUR_BAM -nb $NORMAL_BAM
+        -gender $GENDER -impute-info $IMPUTE_INFO -u $THOUSAND_GENOME_LOCI_DIR -c $PROB_LOCI
+        -pr $SEQ_PROTOCOL -ra $SPECIES_ASSEMBLY -rs $SPECIES -pl $SEQ_PLATFORM -ig $IGNORE_CONTIG_FILE
+        -t $LSF_THREADS_FINALISE -p finalise -nc
+        && $sing_bb battenberg.pl -v > cgpbattenberg.version
+        && date > $OUTDIR/$output
+      """, """lsf_FINALISE"""
+    }
+  }
+}
+
+battenberg_cn = {
+  doc title: " cn Battenberg - post process",
+      desc:  "Step to create tumour and normal copy number file used in caveman",
+      constraints: "Requires battenberg finalise step to have been run",
+      author: "cgpit@sanger.ac.uk"
+
+  if("$USER_DEC" == "accept"){
+    produce("$OUTDIR/battenberg_cn.track") {
+      exec """
+        $sing_bb
+        bb_vcf_to_ascat_cn.pl $OUTDIR/${TUMOUR_NAME}_battenberg_cn.vcf.gz > $OUTDIR/${TUMOUR_NAME}.copynumber.caveman.csv
+        && perl -ne '@F=(split q{,}, $_)[1,2,3,4]; $F[1]-1; print join("\\t",@F)."\\n";' < $OUTDIR/${TUMOUR_NAME}.copynumber.caveman.csv > $OUTDIR/${TUMOUR_NAME}.norm.cn.bed
+        && perl -ne '@F=(split q{,}, $_)[1,2,3,6]; $F[1]-1; print join("\\t",@F)."\\n";' < $OUTDIR/${TUMOUR_NAME}.copynumber.caveman.csv > $OUTDIR/${TUMOUR_NAME}.tum.cn.bed
+        && date > $OUTDIR/$output
+      """, """lsf_CN"""
+    }
+  } else {
+    produce("$OUTDIR/battenberg_cn.track") {
+      exec """
+        echo "Result has not yet been accepted, no work to do." && date > $OUTDIR/$output
+      """, """lsf_TOUCH"""
+    }
+  }
+}

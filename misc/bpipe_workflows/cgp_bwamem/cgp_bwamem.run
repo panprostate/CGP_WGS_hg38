@@ -1,0 +1,8 @@
+load 'cgp_bwamem.wfl'
+
+Bpipe.run{
+    bwamem_setup_split+
+    bwamem_bwamem+
+    bwamem_mark+
+    bwamem_mv_bam
+}

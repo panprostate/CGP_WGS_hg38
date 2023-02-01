@@ -1,0 +1,11 @@
+load 'cgp_staging.prm'
+
+about title: "CGP staging bpipe workflow"
+
+staging_stage = {
+	doc title: "staging - stage",
+			desc:  "Stages files from the given list of locations to the list of output locations",
+			constraints: "N/A",
+			author: "cgpit@sanger.ac.uk"
+	exec """stageFiles.pl -i $INFILES -o $OUTFILES""", """lsf_STAGE"""
+}

@@ -1,0 +1,5 @@
+load 'cgp_lane_bam.wfl'
+
+Bpipe.run{
+	lane_bam_streamrg
+}
